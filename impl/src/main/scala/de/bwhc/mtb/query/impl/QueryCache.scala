@@ -150,7 +150,6 @@ class DefaultQueryCache extends QueryCache
 
     queries.replace(query.id,query)
     resultSets.replace(query.id,results)
-    ()
  
   }
 

@@ -48,7 +48,7 @@ trait QueryOps
     query: PeerToPeerQuery
   )(
     implicit ec: ExecutionContext
-  ): Future[Iterable[MTBFile]]
+  ): Future[Iterable[Snapshot[MTBFile]]]
 
 
 

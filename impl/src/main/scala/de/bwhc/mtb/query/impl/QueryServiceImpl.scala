@@ -47,7 +47,7 @@ class QueryServiceProviderImpl extends QueryServiceProvider
     val localSite  = Option(System.getProperty("bwhc.zpm.site")).map(ZPM(_)).get  //TODO: improve configurability
     val db         = LocalDB.getInstance.get //TODO: ensure singleton
     val bwHC       = BwHCConnector.getInstance.get
-    val queryCache = QueryCache.getInstance.getOrElse(DefaultQueryCache)
+    val queryCache = QueryCache.getInstance.getOrElse(new DefaultQueryCache)
 
     new QueryServiceImpl(
       localSite,
@@ -310,22 +310,23 @@ with Logging
 
 
   def get(
-    id: Query.Id
+    query: Query.Id
   )(
     implicit ec: ExecutionContext
   ): Future[Option[Query]] = {
-
-???
+    Future.successful(queryCache get query)
   }
 
   def resultsOf(
     query: PeerToPeerQuery
   )(
     implicit ec: ExecutionContext
-  ): Future[Iterable[MTBFile]] = {
+  ): Future[Iterable[Snapshot[MTBFile]]] = {
 
-???
+    log info s"Processing incoming MTBFile Query from ${query.origin}"
+    log trace prettyPrint(toJson(query)) 
 
+    db findMatching query.parameters
   }
 
 
@@ -346,10 +347,14 @@ with Logging
     implicit ec: ExecutionContext
   ): Future[Option[MTBFile]] = {
 
-???
+    Future.successful(
+      for {
+        rs      <- queryCache resultsOf query 
+        mtbfile <- rs find (_.patient.id == patId)
+      } yield mtbfile 
+    )
 
   }
-
 
 
 }
