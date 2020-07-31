@@ -3,7 +3,6 @@ package de.bwhc.mtb.query.api
 
 
 import java.time.LocalDateTime
-//import java.time.temporal.ChronoUnit
 
 import scala.util.Either
 import scala.concurrent.{

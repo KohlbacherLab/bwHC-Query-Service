@@ -1,0 +1,20 @@
+{
+  "sites": [
+    {
+      "site":"Freiburg",
+      "baseURL":"http://localhost:9001/bwhc/mtb/"
+    },
+    {
+      "site":"Heidelberg",
+      "baseURL":"http://localhost:9002/bwhc/mtb/"
+    },
+    {
+      "site":"Tübingen",
+      "baseURL":"http://localhost:9003/bwhc/mtb/"
+    },
+    {
+      "site":"Ulm",
+      "baseURL":"http://localhost:9004/bwhc/mtb/"
+    }
+  ]
+}

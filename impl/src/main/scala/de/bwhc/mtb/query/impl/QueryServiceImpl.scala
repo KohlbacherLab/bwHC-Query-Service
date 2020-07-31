@@ -16,6 +16,7 @@ import play.api.libs.json.Json.{
 }
 
 import cats.data.{
+  Ior,
   IorNel,
   IorT,
   NonEmptyList
@@ -125,7 +126,7 @@ with Logging
   ): Future[Iterable[Patient]] = {
 
     for {
-      snps <- db.allLatestSnapshots
+      snps <- db.latestSnapshots
       pats = snps.map(_.data.patient)
     } yield pats
 
@@ -355,6 +356,60 @@ with Logging
     )
 
   }
+
+
+  //---------------------------------------------------------------------------
+  // QCReporting operations
+  //---------------------------------------------------------------------------
+
+  def getLocalQCReportFor(
+    site: ZPM,
+    querier: Querier
+  )(
+    implicit ec: ExecutionContext
+  ): Future[Either[String,LocalQCReport]] = {
+
+    log.info(s"Getting LocalQCReport for Querier ${querier.value} from ZPM ${site.value}")
+
+    val result =
+      for {
+        snapshots <- db.latestSnapshots
+        mtbFiles  =  snapshots.map(_.data)
+        report    =  QCReporting.toLocalQCReport(localSite,mtbFiles)
+       } yield report.asRight[String]
+
+    result.recover {
+      case t => t.getMessage.asLeft[LocalQCReport]
+    }
+
+  }
+
+
+  def compileGlobalQCReport(
+    querier: Querier
+  )(
+    implicit ec: ExecutionContext
+  ): Future[IorNel[String,GlobalQCReport]] = {
+
+    log.info(s"Compiling GlobalQCReport for Querier ${querier.value}")
+
+    val extReports =
+      bwHC.requestQCReports(localSite,querier)
+
+    val localReport =
+      getLocalQCReportFor(localSite,querier)
+        .map(Ior.fromEither)
+        .map(_.map(List(_)))
+        .map(_.toIorNel)
+
+    (localReport,extReports)
+      .mapN(_ combine _)
+      .map(_.map(QCReporting.toGlobalQCReport))
+
+  }
+
+
+
 
 
 }

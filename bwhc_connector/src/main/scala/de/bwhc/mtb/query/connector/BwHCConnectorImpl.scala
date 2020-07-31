@@ -1,0 +1,157 @@
+package de.bwhc.mtb.query.connector
+
+
+
+import scala.concurrent.{
+  ExecutionContext,
+  Future
+}
+
+import akka.actor.ActorSystem
+import akka.stream.Materializer
+import play.api.libs.ws.{
+  StandaloneWSClient,
+  StandaloneWSRequest
+}
+import play.api.libs.ws.ahc.StandaloneAhcWSClient
+import play.api.libs.ws.JsonBodyReadables._
+import play.api.libs.ws.JsonBodyWritables._
+
+import play.api.libs.json.{Json,JsValue}
+
+import cats.data.{Ior,IorNel}
+import cats.syntax.ior._
+import cats.instances.list._
+
+
+import de.bwhc.util.Logging
+
+import de.bwhc.mtb.data.entry.dtos.{
+  MTBFile,
+  ZPM
+}
+
+import de.bwhc.mtb.query.api.{
+  Querier,
+  Query,
+  PeerToPeerQuery,
+  LocalQCReport,
+  Snapshot
+}
+
+import de.bwhc.mtb.query.impl.{
+  BwHCConnector,
+  BwHCConnectorProvider
+}
+
+
+
+class BwHCConnectorProviderImpl extends BwHCConnectorProvider
+{
+
+  def getInstance: BwHCConnector = {
+    BwHCConnectorImpl.apply
+  }
+
+}
+
+
+object BwHCConnectorImpl
+{
+
+  implicit val system = ActorSystem()
+  implicit val materializer = Materializer.matFromSystem
+
+  implicit val wsclient = StandaloneAhcWSClient()
+
+  implicit val config = Config.getInstance
+
+  def apply: BwHCConnector = {
+    new BwHCConnectorImpl
+  }
+
+}
+
+
+class BwHCConnectorImpl
+(
+  implicit
+  wsclient: StandaloneWSClient,
+  config: Config
+)
+extends BwHCConnector
+with Logging
+{
+
+/*
+  import cats.Semigroup
+
+  implicit def iterableSG[T]: Semigroup[Iterable[T]] =
+    Semigroup.instance(_ ++ _)
+*/
+
+
+  def requestQCReports(
+    localSite: ZPM,
+    querier: Querier
+  )(
+    implicit ec: ExecutionContext
+  ): Future[IorNel[String,List[LocalQCReport]]] = {
+
+    log.debug(s"Requesting LocalQCReports from peers for Querier ${querier.value}")
+
+    val requests =
+      for {
+        (zpm,url) <- config.peerBaseURLs
+
+        logged = log.trace(s"Site: ${zpm.value}")
+
+        req =
+          wsclient.url(url.toString + "qc/LocalQCReport")
+            .get
+            .map(_.body[JsValue].as[LocalQCReport]) //TODO: handle validation errors
+            .map(_.rightIor[String].toIorNel)
+            .recover {
+              case t => 
+                s"Error in LocalQCReport response from bwHC Site ${zpm.value}: ${t.getMessage}".leftIor[LocalQCReport].toIorNel
+            }
+            .map(_.map(List(_)))
+      } yield req
+
+
+    Future.foldLeft(requests)(List.empty[LocalQCReport].rightIor[String].toIorNel)(_ combine _)
+
+  }
+
+
+  def execute(
+    q: PeerToPeerQuery
+  )(
+    implicit ec: ExecutionContext
+  ): Future[IorNel[String,List[Snapshot[MTBFile]]]] = {
+
+    log.debug(s"Executing Peer-to-Peer Query ${q}") //TODO: Query to JSON
+
+    val requests =
+      for {
+        (zpm,url) <- config.peerBaseURLs
+
+        logged = log.trace(s"Site: ${zpm.value}")
+
+        req =
+          wsclient.url(url.toString + "peer2peer/query")
+            .post(Json.toJson(q))
+            .map(_.body[JsValue].as[SearchSet[Snapshot[MTBFile]]]) //TODO: handle validation errors
+            .map(_.entries)  //TODO: Check if declared SearchSet.total matches entries.size
+            .map(_.rightIor[String].toIorNel)
+            .recover {
+              case t => 
+                s"Error in PeerToPeerQuery response from bwHC Site ${zpm.value}: ${t.getMessage}".leftIor[List[Snapshot[MTBFile]]].toIorNel
+            }
+      } yield req
+
+    Future.foldLeft(requests)(List.empty[Snapshot[MTBFile]].rightIor[String].toIorNel)(_ combine _)
+
+  }
+
+}

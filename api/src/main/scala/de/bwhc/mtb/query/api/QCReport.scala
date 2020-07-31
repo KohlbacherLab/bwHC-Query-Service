@@ -14,8 +14,7 @@ import cats.data.IorNel
 
 import play.api.libs.json._
 
-import de.bwhc.mtb.data.entry.dtos.
-{ 
+import de.bwhc.mtb.data.entry.dtos.{ 
   MTBFile,
   ZPM
 }
@@ -98,7 +97,7 @@ case class LocalQCReport
 
 object LocalQCReport
 {
-  implicit val formatLocalQCReport: Format[LocalQCReport] =
+  implicit val format =
     Json.format[LocalQCReport]
 }
 
@@ -116,7 +115,7 @@ case class GlobalQCReport
 
 object GlobalQCReport
 {
-  implicit val formatGlobalQCReport: Format[GlobalQCReport] =
+  implicit val format =
     Json.format[GlobalQCReport]
 }
 

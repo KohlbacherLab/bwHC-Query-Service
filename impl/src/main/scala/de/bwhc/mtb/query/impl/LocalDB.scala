@@ -22,6 +22,11 @@ import de.bwhc.mtb.data.entry.dtos.{
 
 
 
+trait LocalDBProvider extends SPI[LocalDB]
+
+object LocalDB extends SPILoader(classOf[LocalDBProvider])
+
+
 trait LocalDB
 {
 
@@ -32,7 +37,7 @@ trait LocalDB
   ): Future[Snapshot[MTBFile]]
 
 
-  def allLatestSnapshots(
+  def latestSnapshots(
     implicit ec: ExecutionContext
   ): Future[Iterable[Snapshot[MTBFile]]]
 
@@ -66,7 +71,3 @@ trait LocalDB
   ): Future[History[MTBFile]]
 
 }
-
-trait LocalDBProvider extends SPI[LocalDB]
-
-object LocalDB extends SPILoader(classOf[LocalDBProvider])

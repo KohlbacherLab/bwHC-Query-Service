@@ -9,7 +9,7 @@ import de.bwhc.util.spi._
 trait QueryService
 extends DataOps
    with QueryOps
-//   with QCReportingOps
+   with QCReportingOps
 
 
 trait QueryServiceProvider extends SPI[QueryService]
