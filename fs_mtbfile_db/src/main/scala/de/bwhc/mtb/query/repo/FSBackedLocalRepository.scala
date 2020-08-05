@@ -45,10 +45,7 @@ class FSBackedLocalDBProvider
 {
 
   def getInstance: LocalDB = {
-
-   val dataDirPath = System.getProperty("bwhc.query.data")
-
-    FSBackedLocalDB(new File(dataDirPath))
+    FSBackedLocalDB.instance
   }
 
 }
@@ -60,6 +57,8 @@ object FSBackedLocalDB
   private def toFileInputStream(f: File): InputStream =
     new FileInputStream(f)
 
+  private val dataDir = Option(System.getProperty("bwhc.query.data.dir")).map(new File(_)).get
+
 /*
   //---------------------------------------------------------------------------
   // To add random-generated MTBFiles in case of empty initial data
@@ -70,9 +69,7 @@ object FSBackedLocalDB
   //---------------------------------------------------------------------------
 */
 
-  def apply(
-    dataDir: File
-  ): FSBackedLocalDB = {
+  lazy val instance: FSBackedLocalDB = {
 
     if (!dataDir.exists) dataDir.mkdirs
 
@@ -116,21 +113,6 @@ object FSBackedLocalDB
 
   }
 
-
-/*
-  sealed trait VariantParams
-  {
-    val gene: HGNCGene.Symbol
-    val typeOf: Variant.Type
-  }
-
-  final case class Parameters
-  (
-    diagnoses: Set[String],
-    medicationsWithUsage: Set[MedicationWithUsage],
-    responses: Set[RECIST.Value],
-  )
-*/
 
   import Query._
   import DrugUsage._
