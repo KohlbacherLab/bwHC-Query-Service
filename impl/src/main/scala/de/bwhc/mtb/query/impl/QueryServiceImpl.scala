@@ -46,7 +46,7 @@ class QueryServiceProviderImpl extends QueryServiceProvider
   def getInstance: QueryService = {
 
     val localSite  = Option(System.getProperty("bwhc.zpm.site")).map(ZPM(_)).get  //TODO: improve configurability
-    val db         = LocalDB.getInstance.get //TODO: ensure singleton
+    val db         = LocalDB.getInstance.get
     val bwHC       = BwHCConnector.getInstance.get
     val queryCache = QueryCache.getInstance.getOrElse(new DefaultQueryCache)
 
@@ -151,6 +151,58 @@ with Logging
     db.history(patId)
 
   }
+
+
+  //---------------------------------------------------------------------------
+  // QCReporting operations
+  //---------------------------------------------------------------------------
+
+  def getLocalQCReportFor(
+    site: ZPM,
+    querier: Querier
+  )(
+    implicit ec: ExecutionContext
+  ): Future[Either[String,LocalQCReport]] = {
+
+    log.info(s"Getting LocalQCReport for Querier ${querier.value} from ZPM ${site.value}")
+
+    val result =
+      for {
+        snapshots <- db.latestSnapshots
+        mtbFiles  =  snapshots.map(_.data)
+        report    =  QCReporting.toLocalQCReport(localSite,mtbFiles)
+       } yield report.asRight[String]
+
+    result.recover {
+      case t => t.getMessage.asLeft[LocalQCReport]
+    }
+
+  }
+
+
+  def compileGlobalQCReport(
+    querier: Querier
+  )(
+    implicit ec: ExecutionContext
+  ): Future[IorNel[String,GlobalQCReport]] = {
+
+    log.info(s"Compiling GlobalQCReport for Querier ${querier.value}")
+
+    val extReports =
+      bwHC.requestQCReports(localSite,querier)
+
+    val localReport =
+      getLocalQCReportFor(localSite,querier)
+        .map(Ior.fromEither)
+        .map(_.map(List(_)))
+        .map(_.toIorNel)
+
+    (localReport,extReports)
+      .mapN(_ combine _)
+      .map(_.map(QCReporting.toGlobalQCReport))
+
+  }
+
 
 
   //---------------------------------------------------------------------------
@@ -337,9 +389,11 @@ with Logging
     implicit ec: ExecutionContext
   ): Future[Option[Iterable[PatientView]]] = {
 
+//TODO TODO
 ???
 
   }
+
 
   def mtbFileFrom(
     query: Query.Id,
@@ -356,58 +410,6 @@ with Logging
     )
 
   }
-
-
-  //---------------------------------------------------------------------------
-  // QCReporting operations
-  //---------------------------------------------------------------------------
-
-  def getLocalQCReportFor(
-    site: ZPM,
-    querier: Querier
-  )(
-    implicit ec: ExecutionContext
-  ): Future[Either[String,LocalQCReport]] = {
-
-    log.info(s"Getting LocalQCReport for Querier ${querier.value} from ZPM ${site.value}")
-
-    val result =
-      for {
-        snapshots <- db.latestSnapshots
-        mtbFiles  =  snapshots.map(_.data)
-        report    =  QCReporting.toLocalQCReport(localSite,mtbFiles)
-       } yield report.asRight[String]
-
-    result.recover {
-      case t => t.getMessage.asLeft[LocalQCReport]
-    }
-
-  }
-
-
-  def compileGlobalQCReport(
-    querier: Querier
-  )(
-    implicit ec: ExecutionContext
-  ): Future[IorNel[String,GlobalQCReport]] = {
-
-    log.info(s"Compiling GlobalQCReport for Querier ${querier.value}")
-
-    val extReports =
-      bwHC.requestQCReports(localSite,querier)
-
-    val localReport =
-      getLocalQCReportFor(localSite,querier)
-        .map(Ior.fromEither)
-        .map(_.map(List(_)))
-        .map(_.toIorNel)
-
-    (localReport,extReports)
-      .mapN(_ combine _)
-      .map(_.map(QCReporting.toGlobalQCReport))
-
-  }
-
 
 
 

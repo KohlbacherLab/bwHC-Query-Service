@@ -24,6 +24,8 @@ import org.slf4j.{
   LoggerFactory
 }
 
+import de.bwhc.util.Logging
+
 import de.bwhc.mtb.query.api._
 import QCReport._
 import QCReport.CompletionLevel._
@@ -53,11 +55,14 @@ trait QCReporting
 }
 
 
-object QCReporting extends QCReporting
+object QCReporting
+extends QCReporting
+with Logging
 {
 
   import java.time.temporal.ChronoUnit
-  import java.time.temporal.ChronoUnit._
+  import ChronoUnit._
+
 
   def toLocalQCReport(
     zpm: ZPM,
@@ -66,13 +71,13 @@ object QCReporting extends QCReporting
 
     val total = mtbFiles.size
 
-//    val mtbFilesWithNGS      = mtbFiles.filterNot(_.ngsReports.isEmpty)
-    val mtbFilesWithCarePlan = mtbFiles.filterNot(_.carePlans.exists(!_.isEmpty))
-    val mtbFilesWithFU       = mtbFiles.filterNot(_.molecularTherapies.exists(!_.isEmpty))
+    val mtbFilesWithNGS      = mtbFiles.filter(_.ngsReports.exists(!_.isEmpty))
+    val mtbFilesWithCarePlan = mtbFiles.filter(_.recommendations.exists(!_.isEmpty))
+    val mtbFilesWithFU       = mtbFiles.filter(_.molecularTherapies.exists(!_.isEmpty))
 
     val completionStats =
       Seq(
-//        Sequenced       -> mtbFilesWithNGS.size,
+        Sequenced       -> mtbFilesWithNGS.size,
         CarePlanIssued  -> mtbFilesWithCarePlan.size,
         FollowedUp      -> mtbFilesWithFU.size,
         PatientDeceased -> mtbFiles.filter(_.patient.dateOfDeath.isDefined).size
@@ -83,15 +88,15 @@ object QCReporting extends QCReporting
 
     // Average durations
     implicit val tUnit: ChronoUnit = DAYS
-/*
+
     val tToNGS =
       for {
         mtbfile   <- mtbFilesWithNGS
-        referral  =  mtbfile.period.start
-        ngs       <- mtbfile.ngsReports
+        referral  =  mtbfile.episode.period.start
+        ngs       <- mtbfile.ngsReports.get
         t         =  tUnit.between(referral,ngs.issueDate)
       } yield t
-*/
+
 
     val tToCarePlan =
       for {
@@ -106,8 +111,8 @@ object QCReporting extends QCReporting
     val tToFU =
       for {
         mtbfile   <- mtbFilesWithFU
-        recomms   =  mtbfile.carePlans.flatMap(_.recommendations.toList)
-        molThs    =  mtbfile.molecularTherapies
+        recomms   =  mtbfile.recommendations.get
+        molThs    =  mtbfile.molecularTherapies.get
                        .map(_.history.minBy(_.recordedOn))
         fu        <- mtbfile.followUp
         molTh     =  molThs.find(_.id == fu.therapy).get
@@ -119,7 +124,7 @@ object QCReporting extends QCReporting
 
     val meanDurations =
       Seq(
-//        ReferralToSequencing -> Duration(mean(tToNGS),tUnit),
+        ReferralToSequencing -> Duration(mean(tToNGS),tUnit),
         ReferralToCarePlan   -> Duration(mean(tToCarePlan),tUnit),
 //        CarePlanToFollowUp   -> Duration(mean(tToFU),tUnit)
       )

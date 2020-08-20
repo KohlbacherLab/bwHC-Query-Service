@@ -83,13 +83,6 @@ extends BwHCConnector
 with Logging
 {
 
-/*
-  import cats.Semigroup
-
-  implicit def iterableSG[T]: Semigroup[Iterable[T]] =
-    Semigroup.instance(_ ++ _)
-*/
-
 
   def requestQCReports(
     localSite: ZPM,
@@ -107,7 +100,7 @@ with Logging
         logged = log.trace(s"Site: ${zpm.value}")
 
         req =
-          wsclient.url(url.toString + "qc/LocalQCReport")
+          wsclient.url(url.toString + "reporting/LocalQCReport")
             .get
             .map(_.body[JsValue].as[LocalQCReport]) //TODO: handle validation errors
             .map(_.rightIor[String].toIorNel)
