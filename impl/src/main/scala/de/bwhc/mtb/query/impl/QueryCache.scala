@@ -117,7 +117,7 @@ class DefaultQueryCache extends QueryCache
 
 
 
-  def newQueryId: Query.Id =  Query.Id(randomUUID.toString)
+  def newQueryId: Query.Id = Query.Id(randomUUID.toString)
   
 
   def +=(

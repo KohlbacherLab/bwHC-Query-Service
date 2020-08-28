@@ -376,11 +376,15 @@ with Logging
     implicit ec: ExecutionContext
   ): Future[Iterable[Snapshot[MTBFile]]] = {
 
-    log info s"Processing incoming MTBFile Query from ${query.origin}"
+    log info s"Processing peer-to-peer MTBFile Query from ${query.origin}"
     log trace prettyPrint(toJson(query)) 
 
     db findMatching query.parameters
   }
+
+
+
+  import de.bwhc.util.mapping.syntax._
 
 
   def patientsFrom(
@@ -389,8 +393,16 @@ with Logging
     implicit ec: ExecutionContext
   ): Future[Option[Iterable[PatientView]]] = {
 
-//TODO TODO
-???
+    import PatientView._
+
+    Future.successful(
+      for {
+        rs   <- queryCache resultsOf query 
+        pats =  rs.map(_.patient)
+                  .map(_.mapTo[PatientView])
+      } yield pats
+    )
+
 
   }
 

@@ -34,10 +34,6 @@ case class PatientView
 object PatientView
 {
 
-//  import VitalStatus._
-
-//  import java.time.temporal.ChronoUnit.YEARS
-
   import extensions._
 
   implicit val fromPatient: Patient => PatientView = {
@@ -48,8 +44,6 @@ object PatientView
         pat.gender,
         pat.age,
         pat.vitalStatus
-//        pat.birthDate.map(YEARS.between(_,pat.dateOfDeath.getOrElse(LocalDate.now)).toInt),
-//        pat.dateOfDeath.map(_ => Deceased).getOrElse(Alive)
       )
   }
 

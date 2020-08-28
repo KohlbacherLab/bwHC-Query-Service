@@ -44,6 +44,7 @@ trait QueryOps
   ): Future[Option[Query]]
 
 
+
   def resultsOf(
     query: PeerToPeerQuery
   )(
