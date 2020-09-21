@@ -370,6 +370,7 @@ with Logging
     Future.successful(queryCache get query)
   }
 
+
   def resultsOf(
     query: PeerToPeerQuery
   )(

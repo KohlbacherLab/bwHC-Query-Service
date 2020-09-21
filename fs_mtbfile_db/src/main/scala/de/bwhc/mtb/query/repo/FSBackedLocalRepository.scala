@@ -59,15 +59,24 @@ object FSBackedLocalDB
 
   private val dataDir = Option(System.getProperty("bwhc.query.data.dir")).map(new File(_)).get
 
-/*
+
   //---------------------------------------------------------------------------
   // To add random-generated MTBFiles in case of empty initial data
   import de.ekut.tbi.generators.Gen
-  import de.bwhc.mtb.query.data.gen.Gens._
+  import de.bwhc.mtb.data.gens._
 
   implicit val rnd = new scala.util.Random(42)
+
+  implicit val genSnapshotId: Gen[Snapshot.Id] =
+    Gen.uuidStrings.map(Snapshot.Id)
+
+  implicit val genMTBFileSnapshot: Gen[Snapshot[MTBFile]] =
+    for {
+      id      <- Gen.of[Snapshot.Id]
+      mtbfile <- Gen.of[MTBFile]
+    } yield Snapshot(id,Instant.now,mtbfile)
   //---------------------------------------------------------------------------
-*/
+
 
   lazy val instance: FSBackedLocalDB = {
 
@@ -82,24 +91,23 @@ object FSBackedLocalDB
           .map(Json.fromJson[Snapshot[MTBFile]](_))
           .map(_.get)
       }
+      //------------------------------------------------------
       // In case there are no REAL imported MTBFiles,
       // compensate with a bit of random-generated in-memory data 
-/*
       .filterNot(_.isEmpty)
       .getOrElse {
 
-        val defaultN  = Option(System.getProperty("bwhc.generate.if.empty")).map(_.toInt).getOrElse(0) 
-        val localSite = Option(System.getProperty("bwhc.zpm.site")).map(ZPM).get
+        val defaultN  = Option(System.getProperty("bwhc.query.data.generate")).map(_.toInt).getOrElse(0) 
+        val localSite = Option(System.getProperty("bwhc.zpm.site")).map(ZPM(_)).get
 
         LazyList.fill(defaultN)(Gen.of[Snapshot[MTBFile]].next)
-          .map { 
-             snp =>
-               val mtbfile = snp.data
-               snp.copy(data = mtbfile.copy(patient = mtbfile.patient.copy(managingZPM = Some(localSite))))
+          .map { snp =>
+            val mtbfile = snp.data
+            snp.copy(data = mtbfile.copy(patient = mtbfile.patient.copy(managingZPM = Some(localSite))))
           }
       }
-*/
-      .getOrElse(LazyList.empty[Snapshot[MTBFile]])
+      //------------------------------------------------------
+//      .getOrElse(LazyList.empty[Snapshot[MTBFile]])
       .groupBy(_.data.patient.id)
       .view
       .mapValues(_.sortWith((s1,s2) => s1.timestamp.isAfter(s2.timestamp)))

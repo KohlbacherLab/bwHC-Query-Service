@@ -58,6 +58,7 @@ lazy val bwhc_connector = project
     name := "bwhc-connector",
     settings,
     libraryDependencies ++= Seq(
+      dependencies.scalatest,
       dependencies.play_ws_client,
       dependencies.play_ws_json,
       dependencies.scala_xml
@@ -73,6 +74,7 @@ lazy val fs_mtbfile_db = project
     name := "fs-mtbfile-db",
     settings,
     libraryDependencies ++= Seq(
+      dependencies.bwhc_dto_gens
     )
   )
   .dependsOn(
@@ -113,6 +115,7 @@ lazy val dependencies =
     val scala_xml      = "org.scala-lang.modules" %% "scala-xml"               % "2.0.0-M1"
     val bwhc_utils     = "de.bwhc"                %% "utils"                   % "1.0-SNAPSHOT"
     val bwhc_data_api  = "de.bwhc"                %% "data-entry-service-api"  % "1.0-SNAPSHOT"
+    val bwhc_dto_gens  = "de.bwhc"                %% "mtb-dto-generators"      % "1.0-SNAPSHOT"
   }
 
 
