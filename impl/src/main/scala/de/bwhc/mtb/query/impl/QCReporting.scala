@@ -89,7 +89,7 @@ with Logging
     // Average durations
     implicit val tUnit: ChronoUnit = DAYS
 
-    val tToNGS =
+    val tToNGS = 
       for {
         mtbfile   <- mtbFilesWithNGS
         referral  =  mtbfile.episode.period.start
@@ -104,29 +104,26 @@ with Logging
         referral  =  mtbfile.episode.period.start
         carePlan  <- mtbfile.carePlans.get
         if (carePlan.issuedOn isDefined)
-        t         =  DAYS.between(referral,carePlan.issuedOn.get)
+        t         =  tUnit.between(referral,carePlan.issuedOn.get)
       } yield t
 
-/*
+
     val tToFU =
       for {
         mtbfile   <- mtbFilesWithFU
         recomms   =  mtbfile.recommendations.get
-        molThs    =  mtbfile.molecularTherapies.get
-                       .map(_.history.minBy(_.recordedOn))
-        fu        <- mtbfile.followUp
-        molTh     =  molThs.find(_.id == fu.therapy).get
+        molTh     <- mtbfile.molecularTherapies.get.map(_.history.minBy(_.recordedOn))
         rec       =  recomms.find(_.id == molTh.basedOn).get
-        mtbDate   =  rec.issueDate
-        t         =  DAYS.between(mtbDate,fu.effectiveDate)
+        if (rec.issuedOn isDefined)
+        t         =  tUnit.between(molTh.recordedOn,rec.issuedOn.get)
       } yield t
-*/      
+
 
     val meanDurations =
       Seq(
         ReferralToSequencing -> Duration(mean(tToNGS),tUnit),
         ReferralToCarePlan   -> Duration(mean(tToCarePlan),tUnit),
-//        CarePlanToFollowUp   -> Duration(mean(tToFU),tUnit)
+        CarePlanToFollowUp   -> Duration(mean(tToFU),tUnit)
       )
       .map { case (s,d) => TimeSpanWithDuration(s,d) }
  

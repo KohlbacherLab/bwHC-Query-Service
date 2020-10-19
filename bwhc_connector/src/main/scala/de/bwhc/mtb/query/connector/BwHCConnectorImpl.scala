@@ -100,7 +100,7 @@ with Logging
         logged = log.trace(s"Site: ${zpm.value}")
 
         req =
-          wsclient.url(url.toString + "reporting/LocalQCReport")
+          wsclient.url(url.toString + "peer2peer/LocalQCReport")
             .get
             .map(_.body[JsValue].as[LocalQCReport]) //TODO: handle validation errors
             .map(_.rightIor[String].toIorNel)
