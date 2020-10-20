@@ -35,6 +35,12 @@ import de.bwhc.mtb.query.api._
 import de.bwhc.mtb.data.entry.dtos.{
   MTBFile,
   Patient,
+  TherapyRecommendation,
+  MolecularTherapyView,
+  MolecularTherapyDocumentation,
+  Specimen,
+  SomaticNGSReport,
+  NGSSummary,
   ZPM
 }
 
@@ -222,6 +228,8 @@ with Logging
       //-----------------------------------------------------------------------
       case Submit(querier,mode,params) => {
 
+//TODO: Validate Query Parameters (ICD-10s, ATC Codes, HGNC symbols) for validity ??
+
         log.info(s"Processing new query for Querier ${querier.value}")
         log.trace(s"Query Mode: $mode")
         log.trace(s"Query parameters: $params") //TODO params to JSON
@@ -250,6 +258,8 @@ with Logging
 
       //-----------------------------------------------------------------------
       case Update(id,mode,params,filter) => {
+
+//TODO: Validate Query Parameters (ICD-10s, ATC Codes, HGNC symbols) for validity ??
 
         log.info(s"Updating Query ${id.value}")
 
@@ -425,6 +435,78 @@ with Logging
   }
 
 
+  def therapyRecommendationsFrom(
+    query: Query.Id,
+  )(
+    implicit ec: ExecutionContext
+  ): Future[Option[Iterable[TherapyRecommendation]]] = {
+
+    Future.successful(
+      for {
+        resultSet <- queryCache resultsOf query 
+        allRecs =
+          for {
+            mtbfile <- resultSet
+            recs    <- mtbfile.recommendations.getOrElse(List.empty[TherapyRecommendation]) 
+          } yield recs
+
+      } yield allRecs
+    )
+
+  }
+
+
+  def molecularTherapiesFrom(
+    query: Query.Id,
+  )(
+    implicit ec: ExecutionContext
+  ): Future[Option[Iterable[MolecularTherapyView]]] = {
+
+    Future.successful(
+      for {
+        resultSet <- queryCache resultsOf query 
+        allMolTh =
+          for {
+            mtbfile <- resultSet
+            molThs  <- mtbfile.molecularTherapies
+                         .getOrElse(List.empty[MolecularTherapyDocumentation])
+                         .filter(_.history.isEmpty)
+                         //TODO: sort by history date to pick latest MolecularTherapy follow-up record
+                         .map(_.history.head)
+                         .map(_.mapTo[MolecularTherapyView])
+          } yield molThs
+
+      } yield allMolTh
+    )
+
+  }
+
+
+  def ngsSummariesFrom(
+    query: Query.Id,
+  )(
+    implicit ec: ExecutionContext
+  ): Future[Option[Iterable[NGSSummary]]] = {
+
+    import NGSSummary._
+
+    Future.successful(
+      for {
+        resultSet <- queryCache resultsOf query 
+        ngsSummaries =
+          for {
+            mtbfile   <- resultSet
+            specimens =  mtbfile.specimens.getOrElse(List.empty[Specimen])
+            ngs       <- mtbfile.ngsReports.getOrElse(List.empty[SomaticNGSReport])
+            summary   =  (specimens.find(_.id == ngs.specimen).get,ngs).mapTo[NGSSummary]
+          } yield summary
+
+      } yield ngsSummaries
+    )
+
+
+
+  }
 
 
 }

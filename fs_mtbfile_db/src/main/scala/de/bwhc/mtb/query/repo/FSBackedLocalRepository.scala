@@ -124,15 +124,7 @@ object FSBackedLocalDB
 
   import Query._
   import DrugUsage._
-
-  import de.bwhc.mtb.data.entry.dtos.{
-    MolecularTherapy,
-    OngoingTherapy,
-    NotDoneTherapy,
-    StoppedTherapy,
-    CompletedTherapy
-  }
-
+  import Variant.Gene
 
   import scala.language.implicitConversions
 
@@ -140,16 +132,22 @@ object FSBackedLocalDB
 
     case Snapshot(_,_,mtbfile) =>
 
-      val Parameters(/*variants,*/icd10s,drugs,recists) = params
+      def matchesSelection[T](
+        vals: Iterable[T],
+        selection: Set[T]
+      ): Boolean = {
+        selection.isEmpty || vals.exists(v => selection contains v)
+      }
 
-      val (usedDrugSel,recDrugSel) = drugs.partition(_.usage == Used)
+
+      val (usedDrugSel,recDrugSel) = params.medicationsWithUsage.partition(_.usage == Used)
 
       val recommendedDrugCodes =
         mtbfile.recommendations
           .getOrElse(List.empty[TherapyRecommendation])
           .map(_.medication.toList.toSet)
-          .map(_.map(_.code.value))
-          .fold(Set.empty[String])(_ ++ _)
+          .map(_.map(_.code))
+          .fold(Set.empty[Medication])(_ ++ _)
 
       val usedDrugCodes =
         mtbfile.molecularTherapies
@@ -162,23 +160,30 @@ object FSBackedLocalDB
             case th: CompletedTherapy => th.medication.toList.toSet 
             case _                    => Set.empty[Coding[Medication]]
           }
-          .map(_.map(_.code.value))
-          .fold(Set.empty[String])(_ ++ _)
+          .map(_.map(_.code))
+          .fold(Set.empty[Medication])(_ ++ _)
 
-//TODO filter by variants
 
-      matchesSelection(mtbfile.diagnoses.get.map(_.icd10.get.code.value), icd10s) &&
-      matchesSelection(mtbfile.responses.getOrElse(List.empty[Response]).map(_.value.code), recists) &&
+      val matchingMutatedGene = 
+        (for {
+          ngs <- mtbfile.ngsReports.getOrElse(List.empty[SomaticNGSReport])
+
+          snvGenes = ngs.simpleVariants.getOrElse(List.empty[SimpleVariant])
+                       .map(_.gene.code)
+
+          cnvGenes = ngs.copyNumberVariants.getOrElse(List.empty[CNV])
+                       .flatMap(_.reportedAffectedGenes.getOrElse(List.empty[Coding[Gene]]).map(_.code))
+
+        } yield (matchesSelection(snvGenes,params.mutatedGenes) || matchesSelection(cnvGenes,params.mutatedGenes))
+        ).exists(_ == true)
+
+
+      matchingMutatedGene &&
+      matchesSelection(mtbfile.diagnoses.getOrElse(List.empty[Diagnosis]).map(_.icd10.get.code), params.diagnoses) &&
+      matchesSelection(mtbfile.responses.getOrElse(List.empty[Response]).map(_.value.code), params.responses) &&
       matchesSelection(usedDrugCodes, usedDrugSel.map(_.code)) &&
       matchesSelection(recommendedDrugCodes, recDrugSel.map(_.code))
 
-  }
-
-  private def matchesSelection[T](
-    vals: Iterable[T],
-    sel: Set[T]
-  ): Boolean = {
-    sel.isEmpty || !(vals.toSet & sel).isEmpty
   }
 
 }

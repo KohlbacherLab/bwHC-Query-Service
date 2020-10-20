@@ -22,8 +22,11 @@ import de.bwhc.util.data.Interval
 
 import de.bwhc.mtb.data.entry.dtos.{
   Gender,
+  ICD10GM,
   Patient,
+  Medication,
   RECIST,
+  Variant,
   ZPM
 }
 
@@ -74,7 +77,7 @@ object Query
 
 
   case class MedicationWithUsage(
-    code: String,
+    code: Medication,
     usage: DrugUsage.Value
   )
 
@@ -84,7 +87,8 @@ object Query
  
   final case class Parameters
   (
-    diagnoses: Set[String],
+    diagnoses: Set[ICD10GM],
+    mutatedGenes: Set[Variant.Gene],
     medicationsWithUsage: Set[MedicationWithUsage],
     responses: Set[RECIST.Value],
   )
@@ -94,7 +98,8 @@ object Query
   {
     lazy val empty = 
       Parameters(
-        Set.empty[String],
+        Set.empty[ICD10GM],
+        Set.empty[Variant.Gene],
         Set.empty[MedicationWithUsage],
         Set.empty[RECIST.Value]
       )

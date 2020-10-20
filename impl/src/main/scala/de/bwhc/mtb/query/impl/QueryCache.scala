@@ -7,6 +7,7 @@ import scala.concurrent.{
   Future
 }
 
+import de.bwhc.util.Logging
 import de.bwhc.util.spi._
 
 import de.bwhc.mtb.query.api.{
@@ -80,11 +81,20 @@ trait QueryCache
 
 
 
-class DefaultQueryCache extends QueryCache
+class DefaultQueryCache
+extends QueryCache
+with Logging
 {
 
   import java.util.UUID.randomUUID
+
+  import java.time.Instant
+
+  import java.util.concurrent.{Executors,TimeUnit}
+
   import scala.collection.concurrent._
+
+
 
   private val queries: Map[Query.Id,Query] =
     TrieMap.empty[Query.Id,Query]
@@ -92,8 +102,11 @@ class DefaultQueryCache extends QueryCache
   private val resultSets: Map[Query.Id,Snapshots] =
     TrieMap.empty[Query.Id,Snapshots]
 
-  private val filters: Map[Query.Id,MTBFile => Boolean] =
-    TrieMap.empty[Query.Id,MTBFile => Boolean]
+//  private val filters: Map[Query.Id,MTBFile => Boolean] =
+//    TrieMap.empty[Query.Id,MTBFile => Boolean]
+
+  private val filters: Map[Query.Id,Query.Filter] =
+    TrieMap.empty[Query.Id,Query.Filter]
 
 
 
@@ -113,8 +126,48 @@ class DefaultQueryCache extends QueryCache
   }
 
 
-  //TODO: scheduled clean-up task of cached data
+  //---------------------------------------------------------------------------
+  // Scheduled clean-up task of cached data
+  //---------------------------------------------------------------------------
 
+  private class CleanupTask extends Runnable with Logging
+  {
+
+    override def run: Unit = {
+
+      log.debug("Running clean-up task for timed out queries")
+
+      val timedOutQueries =
+        queries.values
+          .filter(_.lastUpdate isBefore Instant.now.minusSeconds(600)) // 10 min timeout limit
+          .map(_.id)
+//        queries.filter {
+//          case (id,query) => query.lastUpdate isBefore Instant.now.minusSeconds(600) // 10 min timeout limit
+//        }.keys
+
+      if (!timedOutQueries.isEmpty){
+         log.info("Timed out queries detected, removing them...")
+      }
+
+      timedOutQueries.tapEach( remove )
+      
+      log.debug("Finished running clean-up task for timed out queries")
+
+    }
+
+  }
+
+  private val executor = Executors.newSingleThreadScheduledExecutor
+
+  executor.scheduleAtFixedRate(
+    new CleanupTask,
+    30,
+    60,
+    TimeUnit.SECONDS
+  )
+
+  //---------------------------------------------------------------------------
+  //---------------------------------------------------------------------------
 
 
   def newQueryId: Query.Id = Query.Id(randomUUID.toString)
@@ -130,6 +183,12 @@ class DefaultQueryCache extends QueryCache
     resultSets += (query.id -> results)
   }
 
+/*
+  private def refresh(queryId: Query.Id): Unit = {
+    queries.get(query.id)
+      .tapEach(q => queries.replace(queryId,q.copy(lastUpdate = Instant.now)))    
+  }
+*/
 
   def update(
     query: Query
@@ -185,7 +244,7 @@ class DefaultQueryCache extends QueryCache
 
 
   def remove(
-    id: Query.Id,
+    id: Query.Id
   ): Unit = {
 
     queries    -= id
@@ -193,5 +252,6 @@ class DefaultQueryCache extends QueryCache
     filters    -= id
 
   }
+
 
 }

@@ -20,7 +20,10 @@ import play.api.libs.json.Json
 
 import de.bwhc.mtb.data.entry.dtos.{
   MTBFile,
-  Patient
+  Patient,
+  TherapyRecommendation,
+  MolecularTherapyView,
+  NGSSummary
 }
 
 
@@ -68,7 +71,7 @@ trait QueryOps
   ): Future[Option[MTBFile]]
 
 
-/*
+
   def therapyRecommendationsFrom(
     query: Query.Id,
   )(
@@ -76,20 +79,19 @@ trait QueryOps
   ): Future[Option[Iterable[TherapyRecommendation]]]
 
 
-  def ngsSummariesFrom(
-    query: Query.Id,
-  )(
-    implicit ec: ExecutionContext
-  ): Future[Option[Iterable[NGSReportSummary]]]
-
-
   def molecularTherapiesFrom(
     query: Query.Id,
   )(
     implicit ec: ExecutionContext
-  ): Future[Iterable[MolecularTherapyView]]
+  ): Future[Option[Iterable[MolecularTherapyView]]]
 
-*/
+
+  def ngsSummariesFrom(
+    query: Query.Id,
+  )(
+    implicit ec: ExecutionContext
+  ): Future[Option[Iterable[NGSSummary]]]
+
 
 }
 
