@@ -98,6 +98,7 @@ object FSBackedLocalDB
       .getOrElse {
 
         val defaultN  = Option(System.getProperty("bwhc.query.data.generate")).map(_.toInt).getOrElse(0) 
+
         val localSite = Option(System.getProperty("bwhc.zpm.site")).map(ZPM(_)).get
 
         LazyList.fill(defaultN)(Gen.of[Snapshot[MTBFile]].next)

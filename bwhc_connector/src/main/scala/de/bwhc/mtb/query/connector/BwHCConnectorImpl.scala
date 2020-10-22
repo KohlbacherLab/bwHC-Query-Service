@@ -50,7 +50,7 @@ class BwHCConnectorProviderImpl extends BwHCConnectorProvider
 {
 
   def getInstance: BwHCConnector = {
-    BwHCConnectorImpl.apply
+    BwHCConnectorImpl.instance
   }
 
 }
@@ -62,22 +62,19 @@ object BwHCConnectorImpl
   implicit val system = ActorSystem()
   implicit val materializer = Materializer.matFromSystem
 
-  implicit val wsclient = StandaloneAhcWSClient()
+  val wsclient = StandaloneAhcWSClient()
 
-  implicit val config = Config.getInstance
+  val config = Config.getInstance
 
-  def apply: BwHCConnector = {
-    new BwHCConnectorImpl
-  }
+  lazy val instance = new BwHCConnectorImpl(wsclient,config)
 
 }
 
 
 class BwHCConnectorImpl
 (
-  implicit
-  wsclient: StandaloneWSClient,
-  config: Config
+  private wsclient: StandaloneWSClient,
+  private config: Config
 )
 extends BwHCConnector
 with Logging

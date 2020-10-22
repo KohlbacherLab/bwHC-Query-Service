@@ -81,7 +81,8 @@ trait QueryCache
 
 
 
-class DefaultQueryCache
+//class DefaultQueryCache
+object DefaultQueryCache
 extends QueryCache
 with Logging
 {
@@ -135,23 +136,20 @@ with Logging
 
     override def run: Unit = {
 
-      log.debug("Running clean-up task for timed out queries")
+      log.debug("Running clean-up task for timed out query sessions")
 
-      val timedOutQueries =
+      val timedOutQueryIds =
         queries.values
           .filter(_.lastUpdate isBefore Instant.now.minusSeconds(600)) // 10 min timeout limit
           .map(_.id)
-//        queries.filter {
-//          case (id,query) => query.lastUpdate isBefore Instant.now.minusSeconds(600) // 10 min timeout limit
-//        }.keys
 
-      if (!timedOutQueries.isEmpty){
-         log.info("Timed out queries detected, removing them...")
+      if (!timedOutQueryIds.isEmpty){
+         log.info("Timed out query sessions detected, removing them...")
       }
 
-      timedOutQueries.tapEach( remove )
-      
-      log.debug("Finished running clean-up task for timed out queries")
+      queries subtractAll timedOutQueryIds
+    
+      log.debug("Finished running clean-up task for timed out query sessions")
 
     }
 

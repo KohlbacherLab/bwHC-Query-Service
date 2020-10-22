@@ -24,7 +24,7 @@ object VitalStatus extends Enumeration
 
 case class PatientView
 (
-  pseudonym: Patient.Id,
+  id: Patient.Id,
   managingZPM: Option[ZPM],
   gender: Gender.Value,
   age: Option[Int], //TODO Quantity with Unit of time
@@ -34,18 +34,31 @@ case class PatientView
 object PatientView
 {
 
-  import extensions._
+//  import extensions._
+
+
+  // INFO: this duplication of ops for Patient.age and vitalStatus,
+  // already defined as extension methods, is required because of weird 
+  // stackoverflow bugs when extension ops are imported
+  // TODO: look for solution
+
+  import java.time.temporal.ChronoUnit.YEARS
 
   implicit val fromPatient: Patient => PatientView = {
     pat =>
-      PatientView(
+      new PatientView(
         pat.id,
         pat.managingZPM,
         pat.gender,
-        pat.age,
-        pat.vitalStatus
+        pat.birthDate.map(
+          bd => YEARS.between(bd,pat.dateOfDeath.getOrElse(LocalDate.now)).toInt
+        ),
+        pat.dateOfDeath.map(_ => VitalStatus.Deceased).getOrElse(VitalStatus.Alive)
+//        pat.age,
+//        pat.vitalStatus
       )
   }
 
   implicit val format = Json.format[PatientView]
+
 }

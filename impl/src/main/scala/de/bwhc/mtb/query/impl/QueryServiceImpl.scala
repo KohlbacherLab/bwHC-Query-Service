@@ -54,7 +54,7 @@ class QueryServiceProviderImpl extends QueryServiceProvider
     val localSite  = Option(System.getProperty("bwhc.zpm.site")).map(ZPM(_)).get  //TODO: improve configurability
     val db         = LocalDB.getInstance.get
     val bwHC       = BwHCConnector.getInstance.get
-    val queryCache = QueryCache.getInstance.getOrElse(new DefaultQueryCache)
+    val queryCache = QueryCache.getInstance.getOrElse(DefaultQueryCache)
 
     new QueryServiceImpl(
       localSite,
@@ -443,40 +443,14 @@ with Logging
 
     Future.successful(
       for {
-        resultSet <- queryCache resultsOf query 
+        resultSet <- queryCache.resultsOf(query)
         allRecs =
           for {
             mtbfile <- resultSet
-            recs    <- mtbfile.recommendations.getOrElse(List.empty[TherapyRecommendation]) 
+            if mtbfile.recommendations.isDefined
+            recs <- mtbfile.recommendations.get
           } yield recs
-
       } yield allRecs
-    )
-
-  }
-
-
-  def molecularTherapiesFrom(
-    query: Query.Id,
-  )(
-    implicit ec: ExecutionContext
-  ): Future[Option[Iterable[MolecularTherapyView]]] = {
-
-    Future.successful(
-      for {
-        resultSet <- queryCache resultsOf query 
-        allMolTh =
-          for {
-            mtbfile <- resultSet
-            molThs  <- mtbfile.molecularTherapies
-                         .getOrElse(List.empty[MolecularTherapyDocumentation])
-                         .filter(_.history.isEmpty)
-                         //TODO: sort by history date to pick latest MolecularTherapy follow-up record
-                         .map(_.history.head)
-                         .map(_.mapTo[MolecularTherapyView])
-          } yield molThs
-
-      } yield allMolTh
     )
 
   }
@@ -492,19 +466,55 @@ with Logging
 
     Future.successful(
       for {
-        resultSet <- queryCache resultsOf query 
+        resultSet <- queryCache.resultsOf(query)
+
         ngsSummaries =
           for {
             mtbfile   <- resultSet
-            specimens =  mtbfile.specimens.getOrElse(List.empty[Specimen])
-            ngs       <- mtbfile.ngsReports.getOrElse(List.empty[SomaticNGSReport])
-            summary   =  (specimens.find(_.id == ngs.specimen).get,ngs).mapTo[NGSSummary]
-          } yield summary
+
+            if mtbfile.specimens.isDefined
+
+            specimens =  mtbfile.specimens.get
+
+            if mtbfile.ngsReports.isDefined
+
+            ngs       <- mtbfile.ngsReports.get
+
+                               // look-up garanteed to work by referential integrity check upon import
+            specimenWithReport = (specimens.find(_.id == ngs.specimen).get -> ngs)
+
+          } yield specimenWithReport.mapTo[NGSSummary]
 
       } yield ngsSummaries
     )
 
+  }
 
+
+  def molecularTherapiesFrom(
+    query: Query.Id,
+  )(
+    implicit ec: ExecutionContext
+  ): Future[Option[Iterable[MolecularTherapyView]]] = {
+
+    Future.successful(
+      for {
+        resultSet <- queryCache.resultsOf(query) 
+        allMolTh =
+          for {
+            mtbfile <- resultSet
+
+            if (mtbfile.molecularTherapies isDefined)
+
+            molThs  <- mtbfile.molecularTherapies.get
+                         .filterNot(_.history.isEmpty)
+                         //TODO: sort by history date to pick earliest MolecularTherapy follow-up record
+                         .map(_.history.head)
+                         .map(_.mapTo[MolecularTherapyView])
+          } yield molThs
+
+      } yield allMolTh
+    )
 
   }
 
