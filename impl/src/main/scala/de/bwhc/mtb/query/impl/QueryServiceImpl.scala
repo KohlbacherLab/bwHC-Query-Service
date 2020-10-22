@@ -50,7 +50,7 @@ class QueryServiceProviderImpl extends QueryServiceProvider
 {
 
   def getInstance: QueryService = {
-
+/*
     val localSite  = Option(System.getProperty("bwhc.zpm.site")).map(ZPM(_)).get  //TODO: improve configurability
     val db         = LocalDB.getInstance.get
     val bwHC       = BwHCConnector.getInstance.get
@@ -62,8 +62,27 @@ class QueryServiceProviderImpl extends QueryServiceProvider
       bwHC,
       queryCache
     )
-
+*/
+    QueryServiceImpl.instance
   }
+
+}
+
+object QueryServiceImpl
+{
+
+  private val localSite  = Option(System.getProperty("bwhc.zpm.site")).map(ZPM(_)).get  //TODO: improve configurability
+  private val db         = LocalDB.getInstance.get
+  private val bwHC       = BwHCConnector.getInstance.get
+  private val queryCache: QueryCache = DefaultQueryCache
+
+  val instance =
+    new QueryServiceImpl(
+      localSite,
+      db,
+      bwHC,
+      queryCache
+    )
 
 }
 
@@ -347,7 +366,7 @@ with Logging
           case t => t.getMessage.leftIor[List[Snapshot[MTBFile]]].toIorNel
         }
 
-     (externalResults,localResults).mapN(_ combine _)
+     (localResults,externalResults).mapN(_ combine _)
 
   }
 

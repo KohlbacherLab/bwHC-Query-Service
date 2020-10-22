@@ -62,27 +62,29 @@ object BwHCConnectorImpl
   implicit val system = ActorSystem()
   implicit val materializer = Materializer.matFromSystem
 
-  val wsclient = StandaloneAhcWSClient()
+  private val wsclient = StandaloneAhcWSClient()
+  private val config = Config.getInstance
 
-  val config = Config.getInstance
-
-  lazy val instance = new BwHCConnectorImpl(wsclient,config)
+  val instance = new BwHCConnectorImpl(wsclient,config)
 
 }
 
 
 class BwHCConnectorImpl
 (
-  private wsclient: StandaloneWSClient,
-  private config: Config
+  private val wsclient: StandaloneWSClient,
+  private val config: Config
 )
 extends BwHCConnector
 with Logging
 {
 
+  private val BWHC_SITE_ORIGIN  = "bwhc-site-origin" 
+  private val BWHC_QUERY_USERID = "bwhc-query-userid"
+
 
   def requestQCReports(
-    localSite: ZPM,
+    origin: ZPM,
     querier: Querier
   )(
     implicit ec: ExecutionContext
@@ -98,6 +100,10 @@ with Logging
 
         req =
           wsclient.url(url.toString + "peer2peer/LocalQCReport")
+            .addHttpHeaders(
+              (BWHC_SITE_ORIGIN  -> origin.value),
+              (BWHC_QUERY_USERID -> querier.value),
+            )
             .get
             .map(_.body[JsValue].as[LocalQCReport]) //TODO: handle validation errors
             .map(_.rightIor[String].toIorNel)
