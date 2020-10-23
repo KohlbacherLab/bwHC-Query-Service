@@ -179,7 +179,8 @@ with Logging
       total,
       completionStats,
       averageDurations,
-      Some(reports.toSeq)
+      reports.toSeq
+//      Some(reports.toSeq)
     )
 
   }

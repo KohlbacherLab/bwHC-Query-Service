@@ -87,21 +87,21 @@ object Query
  
   final case class Parameters
   (
-    diagnoses: Set[ICD10GM],
-    mutatedGenes: Set[Variant.Gene],
-    medicationsWithUsage: Set[MedicationWithUsage],
-    responses: Set[RECIST.Value],
+    diagnoses: Option[Set[ICD10GM]],
+    mutatedGenes: Option[Set[Variant.Gene]],
+    medicationsWithUsage: Option[Set[MedicationWithUsage]],
+    responses: Option[Set[RECIST.Value]]
   )
 
 
   object Parameters
   {
-    lazy val empty = 
+    val empty = 
       Parameters(
-        Set.empty[ICD10GM],
-        Set.empty[Variant.Gene],
-        Set.empty[MedicationWithUsage],
-        Set.empty[RECIST.Value]
+        None,
+        None,
+        None,
+        None
       )
   }
 

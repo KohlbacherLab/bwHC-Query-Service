@@ -24,7 +24,8 @@ lazy val global = project
      api,
      impl,
      bwhc_connector,
-     fs_mtbfile_db
+     fs_mtbfile_db,
+     tests
   )
 
 
@@ -81,7 +82,6 @@ lazy val fs_mtbfile_db = project
     impl
   )
 
-/*
 lazy val tests = project
   .settings(
     name := "tests",
@@ -94,10 +94,10 @@ lazy val tests = project
   )
   .dependsOn(
     api,
-    impl % "test",
-    fs_repositories % "test",
+    impl % Test,
+    fs_mtbfile_db % Test
   )
-*/
+
 
 //-----------------------------------------------------------------------------
 // DEPENDENCIES

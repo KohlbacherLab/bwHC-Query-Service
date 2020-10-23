@@ -103,9 +103,6 @@ with Logging
   private val resultSets: Map[Query.Id,Snapshots] =
     TrieMap.empty[Query.Id,Snapshots]
 
-//  private val filters: Map[Query.Id,MTBFile => Boolean] =
-//    TrieMap.empty[Query.Id,MTBFile => Boolean]
-
   private val filters: Map[Query.Id,Query.Filter] =
     TrieMap.empty[Query.Id,Query.Filter]
 
@@ -159,7 +156,7 @@ with Logging
 
   executor.scheduleAtFixedRate(
     new CleanupTask,
-    30,
+    60,
     60,
     TimeUnit.SECONDS
   )

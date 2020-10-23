@@ -133,15 +133,20 @@ object FSBackedLocalDB
 
     case Snapshot(_,_,mtbfile) =>
 
-      def matchesSelection[T](
+      def matchesQuery[T](
         vals: Iterable[T],
         selection: Set[T]
       ): Boolean = {
         selection.isEmpty || vals.exists(v => selection contains v)
       }
 
+      val diagnoses            = params.diagnoses.getOrElse(Set.empty[ICD10GM])
+      val mutatedGenes         = params.mutatedGenes.getOrElse(Set.empty[Gene])
+      val responses            = params.responses.getOrElse(Set.empty[RECIST.Value])
+      val medicationsWithUsage = params.medicationsWithUsage.getOrElse(Set.empty[MedicationWithUsage])
 
-      val (usedDrugSel,recDrugSel) = params.medicationsWithUsage.partition(_.usage == Used)
+
+      val (usedDrugSel,recDrugSel) = medicationsWithUsage.partition(_.usage == Used)
 
       val recommendedDrugCodes =
         mtbfile.recommendations
@@ -165,8 +170,8 @@ object FSBackedLocalDB
           .fold(Set.empty[Medication])(_ ++ _)
 
 
-      val matchingMutatedGene = 
-        (for {
+      val mutatedGeneMatch = 
+        for {
           ngs <- mtbfile.ngsReports.getOrElse(List.empty[SomaticNGSReport])
 
           snvGenes = ngs.simpleVariants.getOrElse(List.empty[SimpleVariant])
@@ -175,15 +180,14 @@ object FSBackedLocalDB
           cnvGenes = ngs.copyNumberVariants.getOrElse(List.empty[CNV])
                        .flatMap(_.reportedAffectedGenes.getOrElse(List.empty[Coding[Gene]]).map(_.code))
 
-        } yield (matchesSelection(snvGenes,params.mutatedGenes) || matchesSelection(cnvGenes,params.mutatedGenes))
-        ).exists(_ == true)
+        } yield (matchesQuery(snvGenes,mutatedGenes) || matchesQuery(cnvGenes,mutatedGenes))
 
 
-      matchingMutatedGene &&
-      matchesSelection(mtbfile.diagnoses.getOrElse(List.empty[Diagnosis]).map(_.icd10.get.code), params.diagnoses) &&
-      matchesSelection(mtbfile.responses.getOrElse(List.empty[Response]).map(_.value.code), params.responses) &&
-      matchesSelection(usedDrugCodes, usedDrugSel.map(_.code)) &&
-      matchesSelection(recommendedDrugCodes, recDrugSel.map(_.code))
+      (mutatedGeneMatch exists (_ == true))  &&
+      matchesQuery(mtbfile.diagnoses.getOrElse(List.empty[Diagnosis]).map(_.icd10.get.code), diagnoses) &&
+      matchesQuery(mtbfile.responses.getOrElse(List.empty[Response]).map(_.value.code), responses) &&
+      matchesQuery(usedDrugCodes, usedDrugSel.map(_.code)) &&
+      matchesQuery(recommendedDrugCodes, recDrugSel.map(_.code))
 
   }
 

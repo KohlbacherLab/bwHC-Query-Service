@@ -50,19 +50,6 @@ class QueryServiceProviderImpl extends QueryServiceProvider
 {
 
   def getInstance: QueryService = {
-/*
-    val localSite  = Option(System.getProperty("bwhc.zpm.site")).map(ZPM(_)).get  //TODO: improve configurability
-    val db         = LocalDB.getInstance.get
-    val bwHC       = BwHCConnector.getInstance.get
-    val queryCache = QueryCache.getInstance.getOrElse(DefaultQueryCache)
-
-    new QueryServiceImpl(
-      localSite,
-      db,
-      bwHC,
-      queryCache
-    )
-*/
     QueryServiceImpl.instance
   }
 
@@ -418,7 +405,7 @@ with Logging
 
 
   def patientsFrom(
-    query: Query.Id,
+    query: Query.Id
   )(
     implicit ec: ExecutionContext
   ): Future[Option[Iterable[PatientView]]] = {
@@ -428,8 +415,7 @@ with Logging
     Future.successful(
       for {
         rs   <- queryCache resultsOf query 
-        pats =  rs.map(_.patient)
-                  .map(_.mapTo[PatientView])
+        pats =  rs.map(_.patient.mapTo[PatientView])
       } yield pats
     )
 

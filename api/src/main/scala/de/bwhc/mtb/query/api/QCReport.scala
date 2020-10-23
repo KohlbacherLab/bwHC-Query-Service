@@ -109,7 +109,8 @@ case class GlobalQCReport
   patientTotal: Int,
   completionStats: Seq[CompletionLevelWithFrequency],
   averageDurations: Seq[TimeSpanWithDuration],
-  constituentReports: Option[Seq[LocalQCReport]]
+  constituentReports: Seq[LocalQCReport]
+//  constituentReports: Option[Seq[LocalQCReport]]
 ) extends QCReport
 
 
