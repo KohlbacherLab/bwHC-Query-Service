@@ -6,6 +6,7 @@ import scala.concurrent.{
   ExecutionContext,
   Future
 }
+import scala.concurrent.duration._
 
 import akka.actor.ActorSystem
 import akka.stream.Materializer
@@ -59,11 +60,11 @@ class BwHCConnectorProviderImpl extends BwHCConnectorProvider
 object BwHCConnectorImpl
 {
 
-  implicit val system = ActorSystem()
+  implicit val system       = ActorSystem()
   implicit val materializer = Materializer.matFromSystem
 
   private val wsclient = StandaloneAhcWSClient()
-  private val config = Config.getInstance
+  private val config   = Config.getInstance
 
   val instance = new BwHCConnectorImpl(wsclient,config)
 
@@ -78,6 +79,8 @@ class BwHCConnectorImpl
 extends BwHCConnector
 with Logging
 {
+
+  private val timeout = 5 seconds
 
   private val BWHC_SITE_ORIGIN  = "bwhc-site-origin" 
   private val BWHC_QUERY_USERID = "bwhc-query-userid"
@@ -100,6 +103,7 @@ with Logging
 
         req =
           wsclient.url(url.toString + "peer2peer/LocalQCReport")
+            .withRequestTimeout(timeout)
             .addHttpHeaders(
               (BWHC_SITE_ORIGIN  -> origin.value),
               (BWHC_QUERY_USERID -> querier.value),
@@ -136,9 +140,10 @@ with Logging
 
         req =
           wsclient.url(url.toString + "peer2peer/query")
+            .withRequestTimeout(timeout)
             .post(Json.toJson(q))
             .map(_.body[JsValue].as[SearchSet[Snapshot[MTBFile]]]) //TODO: handle validation errors
-            .map(_.entries)  //TODO: Check if declared SearchSet.total matches entries.size
+            .map(_.entries) 
             .map(_.rightIor[String].toIorNel)
             .recover {
               case t => 
