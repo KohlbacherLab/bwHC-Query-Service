@@ -34,9 +34,6 @@ lazy val api = project
     name := "query-service-api",
     settings,
     libraryDependencies ++= Seq(
-//      dependencies.play_json,
-//      dependencies.cats_core,
-//      dependencies.bwhc_utils,
       dependencies.bwhc_data_api
     )
   )
@@ -47,6 +44,9 @@ lazy val impl = project
     name := "query-service-impl",
     settings,
     libraryDependencies ++= Seq(
+      dependencies.hgnc_catalog_api,
+      dependencies.icd_catalogs_api,
+      dependencies.med_catalog_api 
     )
   )
   .dependsOn(
@@ -88,7 +88,10 @@ lazy val tests = project
     settings,
     libraryDependencies ++= Seq(
       dependencies.scalatest,
-      dependencies.logback
+      dependencies.logback,
+      dependencies.hgnc_catalog_impl,
+      dependencies.icd_catalogs_impl,
+      dependencies.med_catalog_impl 
     ),
     publish / skip := true
   )
@@ -105,17 +108,21 @@ lazy val tests = project
 
 lazy val dependencies =
   new {
-    val scalatest      = "org.scalatest"          %% "scalatest"               % "3.1.1" % Test
-    val slf4j          = "org.slf4j"              %  "slf4j-api"               % "1.7.26"
-    val logback        = "ch.qos.logback"         %  "logback-classic"         % "1.0.13" % Test
-//    val cats_core      = "org.typelevel"          %% "cats-core"               % "2.1.1"
-//    val play_json      = "com.typesafe.play"      %% "play-json"               % "2.8.1"
-    val play_ws_client = "com.typesafe.play"      %% "play-ahc-ws-standalone"  % "2.1.2"
-    val play_ws_json   = "com.typesafe.play"      %% "play-ws-standalone-json" % "2.1.2"
-    val scala_xml      = "org.scala-lang.modules" %% "scala-xml"               % "2.0.0-M1"
-    val bwhc_utils     = "de.bwhc"                %% "utils"                   % "1.0-SNAPSHOT"
-    val bwhc_data_api  = "de.bwhc"                %% "data-entry-service-api"  % "1.0-SNAPSHOT"
-    val bwhc_dto_gens  = "de.bwhc"                %% "mtb-dto-generators"      % "1.0-SNAPSHOT"
+    val scalatest          = "org.scalatest"          %% "scalatest"               % "3.1.1" % Test
+    val slf4j              = "org.slf4j"              %  "slf4j-api"               % "1.7.26"
+    val logback            = "ch.qos.logback"         %  "logback-classic"         % "1.0.13" % Test
+    val play_ws_client     = "com.typesafe.play"      %% "play-ahc-ws-standalone"  % "2.1.2"
+    val play_ws_json       = "com.typesafe.play"      %% "play-ws-standalone-json" % "2.1.2"
+    val scala_xml          = "org.scala-lang.modules" %% "scala-xml"               % "2.0.0-M1"
+    val bwhc_utils         = "de.bwhc"                %% "utils"                   % "1.0-SNAPSHOT"
+    val bwhc_data_api      = "de.bwhc"                %% "data-entry-service-api"  % "1.0-SNAPSHOT"
+    val bwhc_dto_gens      = "de.bwhc"                %% "mtb-dto-generators"      % "1.0-SNAPSHOT"
+    val hgnc_catalog_api   = "de.bwhc"                %% "hgnc-api"                % "1.0-SNAPSHOT"
+    val icd_catalogs_api   = "de.bwhc"                %% "icd-catalogs-api"        % "1.0-SNAPSHOT"
+    val med_catalog_api    = "de.bwhc"                %% "medication-catalog-api"  % "1.0-SNAPSHOT"
+    val hgnc_catalog_impl  = "de.bwhc"                %% "hgnc-impl"               % "1.0-SNAPSHOT" % Test
+    val icd_catalogs_impl  = "de.bwhc"                %% "icd-catalogs-impl"       % "1.0-SNAPSHOT" % Test
+    val med_catalog_impl   = "de.bwhc"                %% "medication-catalog-impl" % "1.0-SNAPSHOT" % Test
   }
 
 

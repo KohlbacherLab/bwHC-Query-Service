@@ -18,7 +18,7 @@ import cats.data.{
 
 import play.api.libs.json.Json
 
-import de.bwhc.util.data.Interval
+import de.bwhc.util.data.ClosedInterval
 
 import de.bwhc.mtb.data.entry.dtos.{
   Gender,
@@ -113,7 +113,7 @@ object Query
   final case class Filter
   (
     genders: Set[Gender.Value],
-    ageRange: Interval.Closed[Int],
+    ageRange: ClosedInterval[Int],
     vitalStatus: Set[VitalStatus.Value]
   )
 

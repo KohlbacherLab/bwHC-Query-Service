@@ -10,7 +10,7 @@ import org.scalatest.OptionValues._
 
 import de.bwhc.mtb.data.entry.dtos.ZPM
 
-import de.bwhc.util.data.Interval
+import de.bwhc.util.data.{Interval,ClosedInterval}
 import Interval._
 import de.bwhc.mtb.query.api._
 import Query._
@@ -65,8 +65,8 @@ class Tests extends AsyncFlatSpec
       report.patientTotal >= 0 &&
       report.completionStats.map(_.frequency).forall(
         freq =>
-          (freq.count isIn Interval.Closed(0,report.patientTotal)) &&
-          (freq.percent isIn Interval.Closed(0.0,100.0))
+          (freq.count   isIn ClosedInterval(0   -> report.patientTotal)) &&
+          (freq.percent isIn ClosedInterval(0.0 -> 100.0))
       ) &&
       report.averageDurations.forall(_.duration.value >= 0)
 

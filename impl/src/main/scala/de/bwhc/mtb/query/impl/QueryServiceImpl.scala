@@ -28,22 +28,107 @@ import cats.instances.future._
 import cats.instances.list._
 
 import de.bwhc.util.Logging
-import de.bwhc.util.data.Interval
+import de.bwhc.util.data.ClosedInterval
 
 import de.bwhc.mtb.query.api._
 
 import de.bwhc.mtb.data.entry.dtos.{
   MTBFile,
   Patient,
+  ICD10GM,
+  Medication,
   TherapyRecommendation,
   MolecularTherapyView,
   MolecularTherapyDocumentation,
   Specimen,
   SomaticNGSReport,
   NGSSummary,
+  Variant,
   ZPM
 }
 
+
+import cats.data.Validated.{
+  Valid, Invalid, validNel
+}
+import cats.data.ValidatedNel
+import de.bwhc.util.data.Validation._
+import de.bwhc.util.data.Validation.dsl._
+import de.bwhc.catalogs.icd._
+import de.bwhc.catalogs.hgnc.{HGNCGene,HGNCCatalog}
+import de.bwhc.catalogs.med.MedicationCatalog
+
+
+object ParameterValidation
+{
+
+  import cats.syntax.apply._
+  import cats.instances.set._  
+
+  import scala.language.implicitConversions
+
+  implicit val icd10s =
+    ICD10GMCatalogs.getInstance.get.codings()
+
+  implicit val hgnc =
+    HGNCCatalog.getInstance.get
+
+  implicit val atc =
+    MedicationCatalog.getInstance.get
+
+
+  implicit val icd10codeValidator: Validator[String,ICD10GM] = {
+    case icd10 @ ICD10GM(code) =>
+      (code must be (in (icd10s.map(_.code.value)))
+        otherwise (s"Invalid ICD-10-GM code $code"))
+        .map(_ => icd10)
+  }
+
+  implicit def toHGNCGeneSymbol(gene: Variant.Gene): HGNCGene.Symbol =
+    HGNCGene.Symbol(gene.value)
+
+  implicit val geneSymbolValidator: Validator[String,Variant.Gene] =
+    symbol =>
+      (hgnc.geneWithSymbol(symbol) mustBe defined
+        otherwise(s"Invalid Gene Symbol ${symbol.value}"))
+        .map(_ => symbol)
+
+
+  implicit val mecicationCodeValidator: Validator[String,Medication] = {
+    case med @ Medication(atcCode) =>
+      (atcCode must be (in (atc.entries.map(_.code.value)))
+        otherwise (s"Invalid ATC Medication code $atcCode"))
+       .map(c => med)
+  }
+
+
+  def apply(params: Query.Parameters): ValidatedNel[String,Query.Parameters] = {
+    
+      (
+        params.diagnoses.fold(
+          validNel[String,List[ICD10GM]](List.empty)
+        )(
+          _.toList.validateEach
+        ),
+
+        params.mutatedGenes.fold(
+          validNel[String,List[Variant.Gene]](List.empty)
+        )(
+          _.toList.validateEach
+        ),
+
+        params.medicationsWithUsage.map(_.map(_.code))
+        .fold(
+          validNel[String,List[Medication]](List.empty)
+        )(
+          _.toList.validateEach
+        )      
+        
+      )
+      .mapN { case _: Product => params}
+  }
+
+}
 
 
 class QueryServiceProviderImpl extends QueryServiceProvider
@@ -54,6 +139,7 @@ class QueryServiceProviderImpl extends QueryServiceProvider
   }
 
 }
+
 
 object QueryServiceImpl
 {
@@ -234,31 +320,41 @@ with Logging
       //-----------------------------------------------------------------------
       case Submit(querier,mode,params) => {
 
-//TODO: Validate Query Parameters (ICD-10s, ATC Codes, HGNC symbols) for validity ??
 
         log.info(s"Processing new query for Querier ${querier.value}")
         log.trace(s"Query Mode: $mode")
         log.trace(s"Query parameters: $params") //TODO params to JSON
 
-        val queryId = queryCache.newQueryId
+        // Validate Query Parameters (ICD-10s, ATC Codes, HGNC symbols)
+        ParameterValidation(params) match {
 
-        val processed =
-          for {
-            results <- IorT(submitQuery(queryId,querier,mode,params))
-            query   =  Query(
-                         queryId,
-                         querier,
-                         Instant.now,
-                         mode,
-                         params,
-                         defaultFilterOn(results.map(_.data)),
-                         Instant.now
-                       )
-            _       =  queryCache += (query -> results)
-          } yield query
+          case Invalid(errors) =>
+            Future.successful(errors.leftIor[Query])
 
-        processed.value
+          case Valid(_) => {
 
+            val queryId = queryCache.newQueryId
+            
+            val processed =
+              for {
+                results <- IorT(submitQuery(queryId,querier,mode,params))
+                query   =  Query(
+                             queryId,
+                             querier,
+                             Instant.now,
+                             mode,
+                             params,
+                             defaultFilterOn(results.map(_.data)),
+                             Instant.now
+                           )
+                _       =  queryCache += (query -> results)
+              } yield query
+            
+            processed.value
+            
+          }
+            
+        }
       }
 
 
@@ -272,16 +368,29 @@ with Logging
         val updatedQuery =
           (queryCache get id) match {
 
-            case Some(q) if (q.mode != mode || q.parameters != params) =>
-              (for {
-                results <- IorT(submitQuery(id,q.querier,mode,params))
-                up = q.copy(
-                       mode = mode,
-                       parameters = params,
-                       lastUpdate = Instant.now
-                     )
-                _ =  queryCache.update(up -> results)
-              } yield up).value
+            case Some(q) if (q.mode != mode || q.parameters != params) => {
+
+              // Validate Query Parameters (ICD-10s, ATC Codes, HGNC symbols)
+              ParameterValidation(params) match {
+              
+                case Invalid(errors) =>
+                  Future.successful(errors.leftIor[Query])
+              
+                case Valid(_) => {            
+                  (for {
+                    results <- IorT(submitQuery(id,q.querier,mode,params))
+                    up = q.copy(
+                           mode = mode,
+                           parameters = params,
+                           lastUpdate = Instant.now
+                         )
+                    _ =  queryCache.update(up -> results)
+                  } yield up).value
+
+                }
+
+              }
+            }
 
             case Some(q) =>
               Future.successful(q.rightIor[String].toIorNel)
@@ -369,7 +478,7 @@ with Logging
     val genders = patients.map(_.gender).toSet
 
     val ages = patients.map(_.age).filter(_.isDefined).map(_.get)
-    val ageRange = Interval.Closed(ages.minOption.getOrElse(0),ages.maxOption.getOrElse(0))
+    val ageRange = ClosedInterval(ages.minOption.getOrElse(0),ages.maxOption.getOrElse(0))
 
     val vitalStatus = patients.map(_.vitalStatus).toSet
 
