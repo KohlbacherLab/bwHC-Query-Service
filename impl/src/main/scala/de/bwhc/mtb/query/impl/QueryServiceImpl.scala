@@ -51,84 +51,7 @@ import de.bwhc.mtb.data.entry.dtos.{
 import cats.data.Validated.{
   Valid, Invalid, validNel
 }
-import cats.data.ValidatedNel
-import de.bwhc.util.data.Validation._
-import de.bwhc.util.data.Validation.dsl._
-import de.bwhc.catalogs.icd._
-import de.bwhc.catalogs.hgnc.{HGNCGene,HGNCCatalog}
-import de.bwhc.catalogs.med.MedicationCatalog
 
-
-object ParameterValidation
-{
-
-  import cats.syntax.apply._
-  import cats.instances.set._  
-
-  import scala.language.implicitConversions
-
-  implicit val icd10s =
-    ICD10GMCatalogs.getInstance.get.codings()
-
-  implicit val hgnc =
-    HGNCCatalog.getInstance.get
-
-  implicit val atc =
-    MedicationCatalog.getInstance.get
-
-
-  implicit val icd10codeValidator: Validator[String,ICD10GM] = {
-    case icd10 @ ICD10GM(code) =>
-      (code must be (in (icd10s.map(_.code.value)))
-        otherwise (s"Invalid ICD-10-GM code $code"))
-        .map(_ => icd10)
-  }
-
-  implicit def toHGNCGeneSymbol(gene: Variant.Gene): HGNCGene.Symbol =
-    HGNCGene.Symbol(gene.value)
-
-  implicit val geneSymbolValidator: Validator[String,Variant.Gene] =
-    symbol =>
-      (hgnc.geneWithSymbol(symbol) mustBe defined
-        otherwise(s"Invalid Gene Symbol ${symbol.value}"))
-        .map(_ => symbol)
-
-
-  implicit val mecicationCodeValidator: Validator[String,Medication] = {
-    case med @ Medication(atcCode) =>
-      (atcCode must be (in (atc.entries.map(_.code.value)))
-        otherwise (s"Invalid ATC Medication code $atcCode"))
-       .map(c => med)
-  }
-
-
-  def apply(params: Query.Parameters): ValidatedNel[String,Query.Parameters] = {
-    
-      (
-        params.diagnoses.fold(
-          validNel[String,List[ICD10GM]](List.empty)
-        )(
-          _.toList.validateEach
-        ),
-
-        params.mutatedGenes.fold(
-          validNel[String,List[Variant.Gene]](List.empty)
-        )(
-          _.toList.validateEach
-        ),
-
-        params.medicationsWithUsage.map(_.map(_.code))
-        .fold(
-          validNel[String,List[Medication]](List.empty)
-        )(
-          _.toList.validateEach
-        )      
-        
-      )
-      .mapN { case _: Product => params}
-  }
-
-}
 
 
 class QueryServiceProviderImpl extends QueryServiceProvider
@@ -223,6 +146,8 @@ with Logging
     implicit ec: ExecutionContext
   ): Future[Iterable[Patient]] = {
 
+    log.info(s"Handling request for all Patients")
+
     for {
       snps <- db.latestSnapshots
       pats = snps.map(_.data.patient)
@@ -236,6 +161,8 @@ with Logging
     implicit ec: ExecutionContext
   ): Future[Option[Snapshot[MTBFile]]] = {
 
+    log.info(s"Handling request for latest MTBFile snapshot of Patient ${patId.value}")
+
     db.latestSnapshot(patId)
 
   }
@@ -245,6 +172,8 @@ with Logging
   )(
     implicit ec: ExecutionContext
   ): Future[Option[History[MTBFile]]] = {
+
+    log.info(s"Handling request for MTBFile history of Patient ${patId.value}")
 
     db.history(patId)
 
@@ -262,7 +191,7 @@ with Logging
     implicit ec: ExecutionContext
   ): Future[Either[String,LocalQCReport]] = {
 
-    log.info(s"Getting LocalQCReport for Querier ${querier.value} from ZPM ${site.value}")
+    log.info(s"Handling request for LocalQCReport by Querier ${querier.value} from ZPM ${site.value}")
 
     val result =
       for {
@@ -284,7 +213,7 @@ with Logging
     implicit ec: ExecutionContext
   ): Future[IorNel[String,GlobalQCReport]] = {
 
-    log.info(s"Compiling GlobalQCReport for Querier ${querier.value}")
+    log.info(s"Handling request for GlobalQCReport by Querier ${querier.value}")
 
     val extReports =
       bwHC.requestQCReports(localSite,querier)
@@ -320,10 +249,9 @@ with Logging
       //-----------------------------------------------------------------------
       case Submit(querier,mode,params) => {
 
-
-        log.info(s"Processing new query for Querier ${querier.value}")
-        log.trace(s"Query Mode: $mode")
-        log.trace(s"Query parameters: $params") //TODO params to JSON
+        log.info(s"Processing Query submission by Querier ${querier.value}")
+//        log.info(s"Query Mode: $mode")
+//        log.info(s"Query parameters:\n ${prettyPrint(toJson(params))}") //TODO params to JSON
 
         // Validate Query Parameters (ICD-10s, ATC Codes, HGNC symbols)
         ParameterValidation(params) match {
@@ -338,16 +266,21 @@ with Logging
             val processed =
               for {
                 results <- IorT(submitQuery(queryId,querier,mode,params))
-                query   =  Query(
-                             queryId,
-                             querier,
-                             Instant.now,
-                             mode,
-                             params,
-                             defaultFilterOn(results.map(_.data)),
-                             Instant.now
-                           )
-                _       =  queryCache += (query -> results)
+                query =
+                  Query(
+                    queryId,
+                    querier,
+                    Instant.now,
+                    mode,
+                    params,
+                    defaultFilterOn(results.map(_.data)),
+                    Instant.now
+                  )
+
+                _ = queryCache += (query -> results)
+
+                _ = log.info(s"New Query session opened: ${queryId.value}")
+
               } yield query
             
             processed.value
@@ -360,8 +293,6 @@ with Logging
 
       //-----------------------------------------------------------------------
       case Update(id,mode,params,filter) => {
-
-//TODO: Validate Query Parameters (ICD-10s, ATC Codes, HGNC symbols) for validity ??
 
         log.info(s"Updating Query ${id.value}")
 
@@ -411,8 +342,7 @@ with Logging
       //-----------------------------------------------------------------------
       case ApplyFilter(id,filter) => {
 
-        log.info(s"Applying filter to Query ${id.value}")
-        log.trace(s"Filter: ${prettyPrint(toJson(filter))}")
+        log.info(s"Applying Filter to Query ${id.value}:\n ${prettyPrint(toJson(filter))}")
 
         val applied =
           for {
@@ -446,7 +376,7 @@ with Logging
     ec: ExecutionContext
   ): Future[IorNel[String,Iterable[Snapshot[MTBFile]]]] = {
 
-//TODO: log
+    log.info(s"Submitting Query: ${id.value} \nMode: $mode \nParameters:\n${prettyPrint(toJson(params))}")
 
     val externalResults =
       if (mode == Query.Mode.Federated)
@@ -502,8 +432,7 @@ with Logging
     implicit ec: ExecutionContext
   ): Future[Iterable[Snapshot[MTBFile]]] = {
 
-    log info s"Processing peer-to-peer MTBFile Query from ${query.origin}"
-    log trace prettyPrint(toJson(query)) 
+    log.info(s"Processing peer-to-peer MTBFile Query from ${query.origin} \nQuery: \n${prettyPrint(toJson(query))}") 
 
     db findMatching query.parameters
   }
