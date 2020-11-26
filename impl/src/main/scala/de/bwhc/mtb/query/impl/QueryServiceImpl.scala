@@ -4,16 +4,13 @@ package de.bwhc.mtb.query.impl
 
 import java.time.Instant
 
-import scala.util.Either
+import scala.util.{Either,Success}
 import scala.concurrent.{
   Future,
   ExecutionContext
 }
 
-import play.api.libs.json.Json.{
-  prettyPrint,
-  toJson
-}
+import play.api.libs.json.{Json,Writes}
 
 import cats.data.{
   Ior,
@@ -83,6 +80,17 @@ object QueryServiceImpl
 }
 
 
+case class ResultIds
+(
+  patient: Patient.Id,
+  snapshot: Snapshot.Id
+)
+object ResultIds
+{
+  implicit val format = Json.format[ResultIds]
+}
+
+
 class QueryServiceImpl
 (
   private val localSite: ZPM,
@@ -93,6 +101,11 @@ class QueryServiceImpl
 extends QueryService
 with Logging
 {
+
+  import Json.{prettyPrint,toJson}
+
+
+  def formattedJson[T: Writes](t: T) = prettyPrint(toJson(t)) 
 
 
   //---------------------------------------------------------------------------
@@ -112,7 +125,7 @@ with Logging
       //-----------------------------------------------------------------------
       case Upload(mtbfile) => {
 
-        log.info(s"Handling new MTBFile import for Patient ${mtbfile.patient.id.value}")
+        log.info(s"Processing new MTBFile import for Patient ${mtbfile.patient.id.value}")
 
         db.save(mtbfile)
           .map(Created(mtbfile.patient.id,_))
@@ -126,7 +139,7 @@ with Logging
       //-----------------------------------------------------------------------
       case Delete(patId) => {
 
-        log.info(s"Handling data deletion request for Patient ${patId.value}")
+        log.info(s"Processing data deletion request for Patient ${patId.value}")
 
         db.delete(patId)
           .map(_ => Deleted(patId))
@@ -146,7 +159,7 @@ with Logging
     implicit ec: ExecutionContext
   ): Future[Iterable[Patient]] = {
 
-    log.info(s"Handling request for all Patients")
+    log.info(s"Processing request for all Patients")
 
     for {
       snps <- db.latestSnapshots
@@ -161,7 +174,7 @@ with Logging
     implicit ec: ExecutionContext
   ): Future[Option[Snapshot[MTBFile]]] = {
 
-    log.info(s"Handling request for latest MTBFile snapshot of Patient ${patId.value}")
+    log.info(s"Processing request for latest MTBFile snapshot of Patient ${patId.value}")
 
     db.latestSnapshot(patId)
 
@@ -173,7 +186,7 @@ with Logging
     implicit ec: ExecutionContext
   ): Future[Option[History[MTBFile]]] = {
 
-    log.info(s"Handling request for MTBFile history of Patient ${patId.value}")
+    log.info(s"Processing request for MTBFile history of Patient ${patId.value}")
 
     db.history(patId)
 
@@ -191,7 +204,7 @@ with Logging
     implicit ec: ExecutionContext
   ): Future[Either[String,LocalQCReport]] = {
 
-    log.info(s"Handling request for LocalQCReport by Querier ${querier.value} from ZPM ${site.value}")
+    log.info(s"Processing request for LocalQCReport by Querier ${querier.value} from ZPM ${site.value}")
 
     val result =
       for {
@@ -213,7 +226,7 @@ with Logging
     implicit ec: ExecutionContext
   ): Future[IorNel[String,GlobalQCReport]] = {
 
-    log.info(s"Handling request for GlobalQCReport by Querier ${querier.value}")
+    log.info(s"Processing request for GlobalQCReport by Querier ${querier.value}")
 
     val extReports =
       bwHC.requestQCReports(localSite,querier)
@@ -250,8 +263,6 @@ with Logging
       case Submit(querier,mode,params) => {
 
         log.info(s"Processing Query submission by Querier ${querier.value}")
-//        log.info(s"Query Mode: $mode")
-//        log.info(s"Query parameters:\n ${prettyPrint(toJson(params))}") //TODO params to JSON
 
         // Validate Query Parameters (ICD-10s, ATC Codes, HGNC symbols)
         ParameterValidation(params) match {
@@ -380,19 +391,46 @@ with Logging
 
     val externalResults =
       if (mode == Query.Mode.Federated)
-        bwHC.execute(PeerToPeerQuery(id,localSite,querier,params))
+        bwHC execute PeerToPeerQuery(id,localSite,querier,params) andThen {
+          case Success(ior) => {
+            ior match {
+
+              case Ior.Left(errs) =>
+                errs.toList.foreach(e => log.error(s"In Query ${id.value}: $e")) 
+
+              case Ior.Right(snps) => {
+                val resultIds = snps.map(snp => ResultIds(snp.data.patient.id,snp.id))
+                log.info(s"External ResultSet for MTBFile Query ${id.value}:\n${formattedJson(resultIds)}")
+              }
+
+              case Ior.Both(errs,snps) => {
+                errs.toList.foreach(e => log.error(s"Query ${id.value}: $e")) 
+                val resultIds = snps.map(snp => ResultIds(snp.data.patient.id,snp.id))
+                log.info(s"External ResultSet for MTBFile Query ${id.value}:\n${formattedJson(resultIds)}")
+              }
+            }
+          }
+        }
       else
         Future.successful(List.empty[Snapshot[MTBFile]].rightIor[String].toIorNel)
 
     val localResults =
       db.findMatching(params)
         .map(_.toList)
+        .andThen {
+          case Success(snps) => {
+            val resultIds =
+              snps.map(snp => ResultIds(snp.data.patient.id,snp.id))
+        
+            log.info(s"Local ResultSet for MTBFile Query ${id.value}:\n${formattedJson(resultIds)}")
+          }
+        }
         .map(_.rightIor[String].toIorNel)
         .recover {
           case t => t.getMessage.leftIor[List[Snapshot[MTBFile]]].toIorNel
         }
 
-     (localResults,externalResults).mapN(_ combine _)
+    (localResults,externalResults).mapN(_ combine _)
 
   }
 
@@ -432,9 +470,17 @@ with Logging
     implicit ec: ExecutionContext
   ): Future[Iterable[Snapshot[MTBFile]]] = {
 
-    log.info(s"Processing peer-to-peer MTBFile Query from ${query.origin} \nQuery: \n${prettyPrint(toJson(query))}") 
+    log.info(s"Processing external peer-to-peer MTBFile Query ${query.id.value} from ${query.origin} \nQuery: \n${formattedJson(query)}") 
 
-    db findMatching query.parameters
+    db.findMatching(query.parameters) andThen {
+      case Success(snps) => {
+        val resultIds =
+          snps.map(snp => ResultIds(snp.data.patient.id,snp.id))
+
+        log.info(s"ResultSet returned for external peer-to-peer MTBFile Query ${query.id.value}:\n${formattedJson(resultIds)}")
+      }
+    }
+
   }
 
 
