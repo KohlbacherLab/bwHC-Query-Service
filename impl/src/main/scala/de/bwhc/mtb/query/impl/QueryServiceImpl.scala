@@ -398,16 +398,11 @@ with Logging
               case Ior.Left(errs) =>
                 errs.toList.foreach(e => log.error(s"In Query ${id.value}: $e")) 
 
-              case Ior.Right(snps) => {
-                val resultIds = snps.map(snp => ResultIds(snp.data.patient.id,snp.id))
-                log.info(s"External ResultSet for MTBFile Query ${id.value}:\n${formattedJson(resultIds)}")
+              case Ior.Both(errs,_) => {
+                errs.toList.foreach(e => log.error(s"Query ${id.value}: $e")) 
               }
 
-              case Ior.Both(errs,snps) => {
-                errs.toList.foreach(e => log.error(s"Query ${id.value}: $e")) 
-                val resultIds = snps.map(snp => ResultIds(snp.data.patient.id,snp.id))
-                log.info(s"External ResultSet for MTBFile Query ${id.value}:\n${formattedJson(resultIds)}")
-              }
+              case _ => ()
             }
           }
         }
