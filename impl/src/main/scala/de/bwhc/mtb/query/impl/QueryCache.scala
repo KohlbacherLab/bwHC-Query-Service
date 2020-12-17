@@ -178,12 +178,6 @@ with Logging
     resultSets += (query.id -> results)
   }
 
-/*
-  private def refresh(queryId: Query.Id): Unit = {
-    queries.get(query.id)
-      .tapEach(q => queries.replace(queryId,q.copy(lastUpdate = Instant.now)))    
-  }
-*/
 
   def update(
     query: Query

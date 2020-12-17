@@ -307,46 +307,54 @@ with Logging
 
         log.info(s"Updating Query ${id.value}")
 
-        val updatedQuery =
-          (queryCache get id) match {
+        // Validate Query Parameters (ICD-10s, ATC Codes, HGNC symbols)
+        ParameterValidation(params) match {
 
-            case Some(q) if (q.mode != mode || q.parameters != params) => {
+          case Invalid(errors) =>
+            Future.successful(errors.leftIor[Query])
 
-              // Validate Query Parameters (ICD-10s, ATC Codes, HGNC symbols)
-              ParameterValidation(params) match {
-              
-                case Invalid(errors) =>
-                  Future.successful(errors.leftIor[Query])
-              
-                case Valid(_) => {            
-                  (for {
-                    results <- IorT(submitQuery(id,q.querier,mode,params))
-                    up = q.copy(
-                           mode = mode,
-                           parameters = params,
-                           lastUpdate = Instant.now
-                         )
-                    _ =  queryCache.update(up -> results)
-                  } yield up).value
+          case Valid(_) => {
 
-                }
+            queryCache.get(id).map {
+
+              oldQuery =>
+ 
+                val updatedQuery =
+                  oldQuery.copy(
+                    mode = mode,
+                    parameters = params,
+                    lastUpdate = Instant.now
+                  )
+
+                if (oldQuery.mode != updatedQuery.mode ||
+                    oldQuery.parameters != updatedQuery.parameters)
+
+                  submitQuery(id,oldQuery.querier,updatedQuery.mode,updatedQuery.parameters)
+                    .andThen {
+                      case Success(Ior.Right(results)) => queryCache.update(updatedQuery -> results)
+                    }
+                    .map(_.map(_ => updatedQuery))
+                    
+                else
+                  Future.successful(updatedQuery).andThen {
+                    case Success(q) => queryCache.update(q)
+                  }
+                  .map(_.rightIor[String].toIorNel)
 
               }
+
             }
-
-            case Some(q) =>
-              Future.successful(q.rightIor[String].toIorNel)
-
-            case None =>
-              Future.successful(s"Invalid Query ID ${id.value}".leftIor[Query].toIorNel)
+            .getOrElse(Future.successful(s"Invalid Query ID ${id.value}".leftIor[Query].toIorNel))
+            .flatMap {
+              errsOrQuery =>
+                filter.fold(
+                  Future.successful(errsOrQuery)
+                )(
+                  this ! ApplyFilter(id,_)
+                )
+            }
           }
-
-        filter.fold(
-          updatedQuery
-        )(
-          this ! ApplyFilter(id,_)
-        )
-
+            
       }
 
 
