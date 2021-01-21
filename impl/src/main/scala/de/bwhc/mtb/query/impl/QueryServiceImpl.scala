@@ -35,13 +35,16 @@ import de.bwhc.mtb.data.entry.dtos.{
   ICD10GM,
   Medication,
   TherapyRecommendation,
-  MolecularTherapyView,
   MolecularTherapyDocumentation,
   Specimen,
   SomaticNGSReport,
   NGSSummary,
   Variant,
   ZPM
+}
+import de.bwhc.mtb.data.entry.views.{
+  MolecularTherapyView,
+  mappings
 }
 
 
@@ -588,6 +591,8 @@ with Logging
   )(
     implicit ec: ExecutionContext
   ): Future[Option[Iterable[MolecularTherapyView]]] = {
+  
+    import mappings._
 
     Future.successful(
       for {
@@ -602,6 +607,7 @@ with Logging
                          .filterNot(_.history.isEmpty)
                          //TODO: sort by history date to pick earliest MolecularTherapy follow-up record
                          .map(_.history.head)
+                       .map(th => (th,mtbfile.responses.flatMap(_.find(_.therapy == th.id))))
                          .map(_.mapTo[MolecularTherapyView])
           } yield molThs
 

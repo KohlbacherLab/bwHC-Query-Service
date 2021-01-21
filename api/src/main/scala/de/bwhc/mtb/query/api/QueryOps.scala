@@ -22,8 +22,11 @@ import de.bwhc.mtb.data.entry.dtos.{
   MTBFile,
   Patient,
   TherapyRecommendation,
-  MolecularTherapyView,
   NGSSummary
+}
+
+import de.bwhc.mtb.data.entry.views.{
+  MolecularTherapyView
 }
 
 
