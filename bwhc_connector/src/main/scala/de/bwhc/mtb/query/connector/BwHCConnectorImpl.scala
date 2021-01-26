@@ -97,12 +97,15 @@ with Logging
 
     val requests =
       for {
-        (zpm,url) <- config.peerBaseURLs
+        (zpm,baseUrl) <- config.peerBaseURLs
 
         logged = log.trace(s"Site: ${zpm.value}")
 
+        url = if (baseUrl.toString endsWith "/") baseUrl.toString
+              else baseUrl.toString + "/"
+
         req =
-          wsclient.url(url.toString + "peer2peer/LocalQCReport")
+          wsclient.url(url + "LocalQCReport")
             .withRequestTimeout(timeout)
             .addHttpHeaders(
               (BWHC_SITE_ORIGIN  -> origin.value),
@@ -134,12 +137,15 @@ with Logging
 
     val requests =
       for {
-        (zpm,url) <- config.peerBaseURLs
+        (zpm,baseUrl) <- config.peerBaseURLs
 
         logged = log.trace(s"Site: ${zpm.value}")
 
+        url = if (baseUrl.toString endsWith "/") baseUrl.toString
+              else baseUrl.toString + "/"
+
         req =
-          wsclient.url(url.toString + "peer2peer/query")
+          wsclient.url(url + "query")
             .withRequestTimeout(timeout)
             .post(Json.toJson(q))
             .map(_.body[JsValue].as[SearchSet[Snapshot[MTBFile]]]) //TODO: handle validation errors
@@ -147,7 +153,7 @@ with Logging
             .map(_.rightIor[String].toIorNel)
             .recover {
               case t => 
-                s"Error in PeerToPeerQuery response from bwHC Site ${zpm.value}: ${t.getMessage}".leftIor[List[Snapshot[MTBFile]]].toIorNel
+                s"Error in Peer-to-peer Query response from bwHC Site ${zpm.value}: ${t.getMessage}".leftIor[List[Snapshot[MTBFile]]].toIorNel
             }
       } yield req
 
