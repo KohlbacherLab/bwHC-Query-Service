@@ -26,7 +26,8 @@ import de.bwhc.mtb.data.entry.dtos.{
 }
 
 import de.bwhc.mtb.data.entry.views.{
-  MolecularTherapyView
+  MolecularTherapyView,
+  MTBFileView
 }
 
 
@@ -72,6 +73,14 @@ trait QueryOps
   )(
     implicit ec: ExecutionContext
   ): Future[Option[MTBFile]]
+
+
+  def mtbFileViewFrom(
+    query: Query.Id,
+    patId: Patient.Id
+  )(
+    implicit ec: ExecutionContext
+  ): Future[Option[MTBFileView]]
 
 
 

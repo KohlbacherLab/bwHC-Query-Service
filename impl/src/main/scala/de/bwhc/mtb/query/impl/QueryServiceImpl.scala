@@ -44,6 +44,7 @@ import de.bwhc.mtb.data.entry.dtos.{
 }
 import de.bwhc.mtb.data.entry.views.{
   MolecularTherapyView,
+  MTBFileView,
   mappings
 }
 
@@ -114,7 +115,7 @@ with Logging
   //---------------------------------------------------------------------------
   // Data Management Operations
   //---------------------------------------------------------------------------
-  def process(
+  override def process(
     cmd: DataOps.Command
   )(
     implicit ec: ExecutionContext
@@ -158,7 +159,7 @@ with Logging
   }
 
 
-  def patients(
+  override def patients(
     implicit ec: ExecutionContext
   ): Future[Iterable[Patient]] = {
 
@@ -171,7 +172,7 @@ with Logging
 
   }
 
-  def mtbFile(
+  override def mtbFile(
     patId: Patient.Id
   )(
     implicit ec: ExecutionContext
@@ -183,7 +184,7 @@ with Logging
 
   }
 
-  def mtbFileHistory(
+  override def mtbFileHistory(
     patId: Patient.Id
   )(
     implicit ec: ExecutionContext
@@ -200,7 +201,7 @@ with Logging
   // QCReporting operations
   //---------------------------------------------------------------------------
 
-  def getLocalQCReportFor(
+  override def getLocalQCReportFor(
     site: ZPM,
     querier: Querier
   )(
@@ -223,7 +224,7 @@ with Logging
   }
 
 
-  def compileGlobalQCReport(
+  override def compileGlobalQCReport(
     querier: Querier
   )(
     implicit ec: ExecutionContext
@@ -252,7 +253,7 @@ with Logging
   // Query Operations
   //---------------------------------------------------------------------------
 
-  def process(
+  override def process(
     cmd: QueryOps.Command
   )(
     implicit ec: ExecutionContext
@@ -461,7 +462,7 @@ with Logging
   }
 
 
-  def get(
+  override def get(
     query: Query.Id
   )(
     implicit ec: ExecutionContext
@@ -470,7 +471,7 @@ with Logging
   }
 
 
-  def resultsOf(
+  override def resultsOf(
     query: PeerToPeerQuery
   )(
     implicit ec: ExecutionContext
@@ -494,7 +495,7 @@ with Logging
   import de.bwhc.util.mapping.syntax._
 
 
-  def patientsFrom(
+  override def patientsFrom(
     query: Query.Id
   )(
     implicit ec: ExecutionContext
@@ -513,7 +514,7 @@ with Logging
   }
 
 
-  def mtbFileFrom(
+  override def mtbFileFrom(
     query: Query.Id,
     patId: Patient.Id
   )(
@@ -530,7 +531,26 @@ with Logging
   }
 
 
-  def therapyRecommendationsFrom(
+  override def mtbFileViewFrom(
+    query: Query.Id,
+    patId: Patient.Id
+  )(
+    implicit ec: ExecutionContext
+  ): Future[Option[MTBFileView]] = {
+
+    import mappings._
+
+    Future.successful(
+      for {
+        rs      <- queryCache resultsOf query 
+        mtbfile <- rs find (_.patient.id == patId)
+      } yield mtbfile.mapTo[MTBFileView]
+    )
+
+  }
+
+
+  override def therapyRecommendationsFrom(
     query: Query.Id,
   )(
     implicit ec: ExecutionContext
@@ -551,7 +571,7 @@ with Logging
   }
 
 
-  def ngsSummariesFrom(
+  override def ngsSummariesFrom(
     query: Query.Id,
   )(
     implicit ec: ExecutionContext
@@ -586,7 +606,7 @@ with Logging
   }
 
 
-  def molecularTherapiesFrom(
+  override def molecularTherapiesFrom(
     query: Query.Id,
   )(
     implicit ec: ExecutionContext
@@ -607,7 +627,7 @@ with Logging
                          .filterNot(_.history.isEmpty)
                          //TODO: sort by history date to pick earliest MolecularTherapy follow-up record
                          .map(_.history.head)
-                       .map(th => (th,mtbfile.responses.flatMap(_.find(_.therapy == th.id))))
+                         .map(th => (th,mtbfile.responses.flatMap(_.find(_.therapy == th.id))))
                          .map(_.mapTo[MolecularTherapyView])
           } yield molThs
 
