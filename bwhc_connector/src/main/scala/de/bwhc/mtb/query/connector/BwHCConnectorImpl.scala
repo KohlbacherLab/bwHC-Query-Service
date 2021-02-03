@@ -17,6 +17,7 @@ import play.api.libs.ws.{
 import play.api.libs.ws.ahc.StandaloneAhcWSClient
 import play.api.libs.ws.JsonBodyReadables._
 import play.api.libs.ws.JsonBodyWritables._
+import play.api.libs.ws.DefaultBodyWritables._
 
 import play.api.libs.json.{Json,JsValue}
 
@@ -80,7 +81,7 @@ extends BwHCConnector
 with Logging
 {
 
-  private val timeout = 10 seconds
+  private val timeout = 20 seconds
 
   private val BWHC_SITE_ORIGIN  = "bwhc-site-origin" 
   private val BWHC_QUERY_USERID = "bwhc-query-userid"
@@ -99,19 +100,17 @@ with Logging
       for {
         (zpm,baseUrl) <- config.peerBaseURLs
 
-        logged = log.trace(s"Site: ${zpm.value}")
-
-        url = if (baseUrl.toString endsWith "/") baseUrl.toString
-              else baseUrl.toString + "/"
+        _ = log.debug(s"Site: ${zpm.value}  URL: ${baseUrl.toString}")
 
         req =
-          wsclient.url(url + "LocalQCReport")
+          wsclient.url(baseUrl.toString + "LocalQCReport")
             .withRequestTimeout(timeout)
-            .addHttpHeaders(
-              (BWHC_SITE_ORIGIN  -> origin.value),
-              (BWHC_QUERY_USERID -> querier.value),
+            .post(
+              Map(
+                BWHC_SITE_ORIGIN  -> origin.value,
+                BWHC_QUERY_USERID -> querier.value
+              )
             )
-            .get
             .map(_.body[JsValue].as[LocalQCReport]) //TODO: handle validation errors
             .map(_.rightIor[String].toIorNel)
             .recover {
@@ -139,13 +138,10 @@ with Logging
       for {
         (zpm,baseUrl) <- config.peerBaseURLs
 
-        logged = log.trace(s"Site: ${zpm.value}")
-
-        url = if (baseUrl.toString endsWith "/") baseUrl.toString
-              else baseUrl.toString + "/"
+        _ = log.debug(s"Site: ${zpm.value}  URL: ${baseUrl.toString}")
 
         req =
-          wsclient.url(url + "query")
+          wsclient.url(baseUrl.toString + "query")
             .withRequestTimeout(timeout)
             .post(Json.toJson(q))
             .map(_.body[JsValue].as[SearchSet[Snapshot[MTBFile]]]) //TODO: handle validation errors

@@ -627,7 +627,12 @@ with Logging
                          .filterNot(_.history.isEmpty)
                          //TODO: sort by history date to pick earliest MolecularTherapy follow-up record
                          .map(_.history.head)
-                         .map(th => (th,mtbfile.responses.flatMap(_.find(_.therapy == th.id))))
+                         .map( th => 
+                           (th,
+                            mtbfile.recommendations.flatMap(_.find(_.id == th.basedOn)).flatMap(rec => mtbfile.diagnoses.flatMap(_.find(_.id == rec.diagnosis))),
+                            mtbfile.responses.flatMap(_.find(_.therapy == th.id)))
+                         )
+//                         .map(th => (th,mtbfile.responses.flatMap(_.find(_.therapy == th.id))))
                          .map(_.mapTo[MolecularTherapyView])
           } yield molThs
 
