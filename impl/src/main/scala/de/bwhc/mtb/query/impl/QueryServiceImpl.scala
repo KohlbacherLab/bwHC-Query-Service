@@ -34,18 +34,17 @@ import de.bwhc.mtb.data.entry.dtos.{
   Patient,
   ICD10GM,
   Medication,
-  TherapyRecommendation,
   MolecularTherapyDocumentation,
   Specimen,
   SomaticNGSReport,
-  NGSSummary,
   Variant,
   ZPM
 }
 import de.bwhc.mtb.data.entry.views.{
   MolecularTherapyView,
   MTBFileView,
-  mappings
+  CarePlanView,
+  TherapyRecommendationView,
 }
 
 
@@ -538,7 +537,7 @@ with Logging
     implicit ec: ExecutionContext
   ): Future[Option[MTBFileView]] = {
 
-    import mappings._
+    import de.bwhc.mtb.data.entry.views.mappings._
 
     Future.successful(
       for {
@@ -554,7 +553,9 @@ with Logging
     query: Query.Id,
   )(
     implicit ec: ExecutionContext
-  ): Future[Option[Iterable[TherapyRecommendation]]] = {
+  ): Future[Option[Iterable[TherapyRecommendationView]]] = {
+
+    import de.bwhc.mtb.data.entry.views.mappings._
 
     Future.successful(
       for {
@@ -562,9 +563,22 @@ with Logging
         allRecs =
           for {
             mtbfile <- resultSet
-            if mtbfile.recommendations.isDefined
-            recs <- mtbfile.recommendations.get
+            cps <-
+              (
+                (
+                 mtbfile.carePlans.getOrElse(List.empty),
+                 mtbfile.diagnoses.getOrElse(List.empty),
+                 mtbfile.recommendations.getOrElse(List.empty),
+                 mtbfile.studyInclusionRequests.getOrElse(List.empty),
+                 mtbfile.geneticCounsellingRequests.getOrElse(List.empty)
+                ),
+                mtbfile.ngsReports.getOrElse(List.empty)
+              )
+              .mapTo[List[CarePlanView]]
+
+            recs <- cps.therapyRecommendations
           } yield recs
+
       } yield allRecs
     )
 
@@ -577,28 +591,21 @@ with Logging
     implicit ec: ExecutionContext
   ): Future[Option[Iterable[NGSSummary]]] = {
 
-    import NGSSummary._
+    import Mappings._
 
     Future.successful(
       for {
         resultSet <- queryCache.resultsOf(query)
-
         ngsSummaries =
           for {
             mtbfile   <- resultSet
-
-            if mtbfile.specimens.isDefined
-
-            specimens =  mtbfile.specimens.get
-
-            if mtbfile.ngsReports.isDefined
-
-            ngs       <- mtbfile.ngsReports.get
-
-                               // look-up garanteed to work by referential integrity check upon import
-            specimenWithReport = (specimens.find(_.id == ngs.specimen).get -> ngs)
-
-          } yield specimenWithReport.mapTo[NGSSummary]
+            summaries <-
+              (
+               mtbfile.ngsReports.getOrElse(List.empty),
+               mtbfile.specimens.getOrElse(List.empty)
+              )
+              .mapTo[List[NGSSummary]]
+          } yield summaries 
 
       } yield ngsSummaries
     )
@@ -612,7 +619,7 @@ with Logging
     implicit ec: ExecutionContext
   ): Future[Option[Iterable[MolecularTherapyView]]] = {
   
-    import mappings._
+    import de.bwhc.mtb.data.entry.views.mappings._
 
     Future.successful(
       for {
@@ -620,20 +627,16 @@ with Logging
         allMolTh =
           for {
             mtbfile <- resultSet
+            molThs <-
+              (
+                //TODO: sort by history date to pick earliest MolecularTherapy follow-up record
+                mtbfile.molecularTherapies.getOrElse(List.empty).filterNot(_.history.isEmpty).map(_.history.head),
+                mtbfile.recommendations.getOrElse(List.empty),
+                mtbfile.diagnoses.getOrElse(List.empty),
+                mtbfile.responses.getOrElse(List.empty)
+              )
+              .mapTo[List[MolecularTherapyView]]
 
-            if (mtbfile.molecularTherapies isDefined)
-
-            molThs  <- mtbfile.molecularTherapies.get
-                         .filterNot(_.history.isEmpty)
-                         //TODO: sort by history date to pick earliest MolecularTherapy follow-up record
-                         .map(_.history.head)
-                         .map( th => 
-                           (th,
-                            mtbfile.recommendations.flatMap(_.find(_.id == th.basedOn)).flatMap(rec => mtbfile.diagnoses.flatMap(_.find(_.id == rec.diagnosis))),
-                            mtbfile.responses.flatMap(_.find(_.therapy == th.id)))
-                         )
-//                         .map(th => (th,mtbfile.responses.flatMap(_.find(_.therapy == th.id))))
-                         .map(_.mapTo[MolecularTherapyView])
           } yield molThs
 
       } yield allMolTh

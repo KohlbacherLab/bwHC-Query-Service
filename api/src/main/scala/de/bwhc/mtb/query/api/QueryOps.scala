@@ -21,13 +21,12 @@ import play.api.libs.json.Json
 import de.bwhc.mtb.data.entry.dtos.{
   MTBFile,
   Patient,
-  TherapyRecommendation,
-  NGSSummary
 }
 
 import de.bwhc.mtb.data.entry.views.{
   MolecularTherapyView,
-  MTBFileView
+  MTBFileView,
+  TherapyRecommendationView
 }
 
 
@@ -88,7 +87,7 @@ trait QueryOps
     query: Query.Id,
   )(
     implicit ec: ExecutionContext
-  ): Future[Option[Iterable[TherapyRecommendation]]]
+  ): Future[Option[Iterable[TherapyRecommendationView]]]
 
 
   def molecularTherapiesFrom(

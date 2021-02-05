@@ -8,7 +8,10 @@ import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.must.Matchers._
 import org.scalatest.OptionValues._
 
-import de.bwhc.mtb.data.entry.dtos.ZPM
+import de.bwhc.mtb.data.entry.dtos.{
+  Gender,
+  ZPM
+}
 
 import de.bwhc.util.data.{Interval,ClosedInterval}
 import Interval._
@@ -75,7 +78,8 @@ class Tests extends AsyncFlatSpec
   private val isValidGlobalQCReport: GlobalQCReport => Boolean = {
 
     report =>
-      isValidQCReport(report) && report.constituentReports.forall(isValidQCReport)
+      isValidQCReport(report) &&
+      report.constituentReports.forall(isValidQCReport)
 
   }
 
@@ -125,8 +129,12 @@ class Tests extends AsyncFlatSpec
   }
 
 
+  import VitalStatus._
+  import Gender._
+  import extensions._
 
-  "Local Query results" must "be valid" in {
+
+  "Local Query results and operations" must "be valid" in {
 
     val mode   = Mode.Local
     val params = Parameters.empty
@@ -143,7 +151,26 @@ class Tests extends AsyncFlatSpec
 
       nAsExpected = queryPatients.value.size mustBe allPatients.size
 
-    } yield nAsExpected
+      filterResult <- service !
+                        ApplyFilter(
+                          query.id,
+                          query.filter.copy(
+                            vitalStatus = Set(Alive),
+                            genders = Set(Female)
+                          )
+                        )
+
+      filteredQuery = filterResult.toOption.value
+
+      filteredPatients <- service.patientsFrom(filteredQuery.id)
+
+      vitalStatusAsExpected =
+        filteredPatients.value.map(_.vitalStatus) must contain only (Alive)
+
+      gendersAsExpected =
+        filteredPatients.value.map(_.gender) must contain only (Female)
+
+    } yield succeed
 
   }
 

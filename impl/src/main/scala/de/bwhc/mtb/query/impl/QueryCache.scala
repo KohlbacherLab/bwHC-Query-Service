@@ -12,6 +12,7 @@ import de.bwhc.util.spi._
 
 import de.bwhc.mtb.query.api.{
   extensions,
+  VitalStatus,
   Querier,
   Query,
   Snapshot
@@ -120,7 +121,9 @@ with Logging
       val pat = mtbfile.patient
 
       (f.genders contains pat.gender) &&
-        (pat.age.getOrElse(-1) isIn f.ageRange)
+      (pat.age.getOrElse(-1) isIn f.ageRange) &&
+      (f.vitalStatus contains pat.vitalStatus)
+          
   }
 
 

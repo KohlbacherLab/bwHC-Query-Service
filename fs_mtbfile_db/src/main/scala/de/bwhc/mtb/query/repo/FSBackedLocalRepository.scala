@@ -79,7 +79,6 @@ object FSBackedLocalDB
 
 
   val instance: FSBackedLocalDB = {
-//  lazy val instance: FSBackedLocalDB = {
 
     if (!dataDir.exists) dataDir.mkdirs
 
