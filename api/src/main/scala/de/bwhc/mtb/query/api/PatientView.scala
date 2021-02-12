@@ -34,9 +34,6 @@ case class PatientView
 object PatientView
 {
 
-//  import extensions._
-
-
   // INFO: this duplication of ops for Patient.age and vitalStatus,
   // already defined as extension methods, is required because of weird 
   // stackoverflow bugs when extension ops are imported
@@ -46,7 +43,7 @@ object PatientView
 
   implicit val fromPatient: Patient => PatientView = {
     pat =>
-      new PatientView(
+      PatientView(
         pat.id,
         pat.managingZPM,
         pat.gender,
@@ -54,8 +51,6 @@ object PatientView
           bd => YEARS.between(bd,pat.dateOfDeath.getOrElse(LocalDate.now)).toInt
         ),
         pat.dateOfDeath.map(_ => VitalStatus.Deceased).getOrElse(VitalStatus.Alive)
-//        pat.age,
-//        pat.vitalStatus
       )
   }
 

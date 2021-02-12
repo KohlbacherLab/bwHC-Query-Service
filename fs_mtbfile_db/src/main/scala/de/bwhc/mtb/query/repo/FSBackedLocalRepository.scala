@@ -150,8 +150,8 @@ object FSBackedLocalDB
 
       val recommendedDrugCodes =
         mtbfile.recommendations
-          .getOrElse(List.empty[TherapyRecommendation])
-          .map(_.medication.toList.toSet)
+          .getOrElse(List.empty)
+          .map(_.medication.getOrElse(List.empty).toSet)
           .map(_.map(_.code))
           .fold(Set.empty[Medication])(_ ++ _)
 
@@ -161,9 +161,9 @@ object FSBackedLocalDB
           .filter(_.history.headOption isDefined)
           .map(_.history.head)
           .map {
-            case th: OngoingTherapy   => th.medication.toList.toSet
-            case th: StoppedTherapy   => th.medication.toList.toSet 
-            case th: CompletedTherapy => th.medication.toList.toSet 
+            case th: OngoingTherapy   => th.medication.getOrElse(List.empty).toSet
+            case th: StoppedTherapy   => th.medication.getOrElse(List.empty).toSet 
+            case th: CompletedTherapy => th.medication.getOrElse(List.empty).toSet 
             case _                    => Set.empty[Coding[Medication]]
           }
           .map(_.map(_.code))
@@ -234,7 +234,7 @@ class FSBackedLocalDB private (
                }
       } yield snp
 
-    saved andThen {
+    saved.andThen {
       case Failure(_) => cache.update(patId,history)
     }
 
