@@ -82,7 +82,7 @@ object FSBackedLocalDB
 
     if (!dataDir.exists) dataDir.mkdirs
 
-    val initData =
+    val initData: Seq[(Patient.Id,List[Snapshot[MTBFile]])] =
       Option {
         dataDir.listFiles((_,n) => n.startsWith("Patient_") && n.endsWith(".json"))
           .to(LazyList)
@@ -111,7 +111,7 @@ object FSBackedLocalDB
 //      .getOrElse(LazyList.empty[Snapshot[MTBFile]])
       .groupBy(_.data.patient.id)
       .view
-      .mapValues(_.sortWith((s1,s2) => s1.timestamp.isAfter(s2.timestamp)))
+      .mapValues(_.sortWith((s1,s2) => s1.timestamp.isAfter(s2.timestamp))) // sort Snapshots in DECREASING order of timestamp, i.e. to have MOST RECENT as head
       .mapValues(_.toList)
       .toSeq
 
@@ -157,7 +157,7 @@ object FSBackedLocalDB
 
       val usedDrugCodes =
         mtbfile.molecularTherapies
-          .getOrElse(List.empty[MolecularTherapyDocumentation])
+          .getOrElse(List.empty)
           .filter(_.history.headOption isDefined)
           .map(_.history.head)
           .map {
@@ -172,20 +172,20 @@ object FSBackedLocalDB
 
       val mutatedGeneMatch = 
         for {
-          ngs <- mtbfile.ngsReports.getOrElse(List.empty[SomaticNGSReport])
+          ngs <- mtbfile.ngsReports.getOrElse(List.empty)
 
-          snvGenes = ngs.simpleVariants.getOrElse(List.empty[SimpleVariant])
+          snvGenes = ngs.simpleVariants.getOrElse(List.empty)
                        .map(_.gene.code)
 
-          cnvGenes = ngs.copyNumberVariants.getOrElse(List.empty[CNV])
-                       .flatMap(_.reportedAffectedGenes.getOrElse(List.empty[Coding[Gene]]).map(_.code))
+          cnvGenes = ngs.copyNumberVariants.getOrElse(List.empty)
+                       .flatMap(_.reportedAffectedGenes.getOrElse(List.empty).map(_.code))
 
         } yield (matchesQuery(snvGenes,mutatedGenes) || matchesQuery(cnvGenes,mutatedGenes))
 
 
       (mutatedGeneMatch exists (_ == true))  &&
-      matchesQuery(mtbfile.diagnoses.getOrElse(List.empty[Diagnosis]).map(_.icd10.get.code), diagnoses) &&
-      matchesQuery(mtbfile.responses.getOrElse(List.empty[Response]).map(_.value.code), responses) &&
+      matchesQuery(mtbfile.diagnoses.getOrElse(List.empty).map(_.icd10.get.code), diagnoses) &&
+      matchesQuery(mtbfile.responses.getOrElse(List.empty).map(_.value.code), responses) &&
       matchesQuery(usedDrugCodes, usedDrugSel.map(_.code)) &&
       matchesQuery(recommendedDrugCodes, recDrugSel.map(_.code))
 
@@ -215,7 +215,7 @@ class FSBackedLocalDB private (
   ): Future[Snapshot[MTBFile]] = {
 
     val patId   = mtbFile.patient.id
-    val history = cache.getOrElse(patId, List.empty[Snapshot[MTBFile]])
+    val history = cache.getOrElse(patId, List.empty)
 
     val saved =
       for {

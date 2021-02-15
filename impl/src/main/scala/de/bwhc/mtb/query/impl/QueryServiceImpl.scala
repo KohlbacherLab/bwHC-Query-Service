@@ -452,7 +452,7 @@ with Logging
     val genders = patients.map(_.gender).toSet
 
     val ages = patients.map(_.age).filter(_.isDefined).map(_.get)
-    val ageRange = ClosedInterval(ages.minOption.getOrElse(0),ages.maxOption.getOrElse(0))
+    val ageRange = ClosedInterval(ages.minOption.getOrElse(0) -> ages.maxOption.getOrElse(0))
 
     val vitalStatus = patients.map(_.vitalStatus).toSet
 
