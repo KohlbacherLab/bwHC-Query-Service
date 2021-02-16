@@ -140,13 +140,13 @@ object FSBackedLocalDB
         selection.isEmpty || vals.exists(v => selection contains v)
       }
 
-      val diagnoses            = params.diagnoses.getOrElse(Set.empty[ICD10GM])
-      val mutatedGenes         = params.mutatedGenes.getOrElse(Set.empty[Gene])
-      val responses            = params.responses.getOrElse(Set.empty[RECIST.Value])
-      val medicationsWithUsage = params.medicationsWithUsage.getOrElse(Set.empty[MedicationWithUsage])
+      val diagnosesSelection            = params.diagnoses.getOrElse(Set.empty[ICD10GM])
+      val mutatedGenesSelection         = params.mutatedGenes.getOrElse(Set.empty[Gene])
+      val responsesSelection            = params.responses.getOrElse(Set.empty[RECIST.Value])
+      val medicationsWithUsageSelection = params.medicationsWithUsage.getOrElse(Set.empty[MedicationWithUsage])
 
 
-      val (usedDrugSel,recDrugSel) = medicationsWithUsage.partition(_.usage == Used)
+      val (usedDrugSel,recDrugSel) = medicationsWithUsageSelection.partition(_.usage == Used)
 
       val recommendedDrugCodes =
         mtbfile.recommendations
@@ -169,23 +169,43 @@ object FSBackedLocalDB
           .map(_.map(_.code))
           .fold(Set.empty[Medication])(_ ++ _)
 
+/*
+      val mutatedGenes =
+        mtbfile.ngsReports.getOrElse(List.empty)
+          .foldLeft(List.empty[Gene]){
+            (genes,ngs) =>
+              val snvGenes =
+                ngs.simpleVariants.getOrElse(List.empty)
+                  .map(_.gene.code)
 
-      val mutatedGeneMatch = 
+              val cnvGenes =
+                ngs.copyNumberVariants.getOrElse(List.empty)
+                  .flatMap(_.reportedAffectedGenes.getOrElse(List.empty).map(_.code))
+
+              genes ++ snvGenes ++ cnvGenes
+              
+          }
+*/
+
+      val mutatedGenes =
         for {
           ngs <- mtbfile.ngsReports.getOrElse(List.empty)
 
-          snvGenes = ngs.simpleVariants.getOrElse(List.empty)
-                       .map(_.gene.code)
+          snvGenes =
+            ngs.simpleVariants.getOrElse(List.empty).map(_.gene.code)
 
-          cnvGenes = ngs.copyNumberVariants.getOrElse(List.empty)
-                       .flatMap(_.reportedAffectedGenes.getOrElse(List.empty).map(_.code))
+          cnvGenes =
+            ngs.copyNumberVariants.getOrElse(List.empty)
+              .flatMap(_.reportedAffectedGenes.getOrElse(List.empty).map(_.code))
 
-        } yield (matchesQuery(snvGenes,mutatedGenes) || matchesQuery(cnvGenes,mutatedGenes))
+          genes <- snvGenes ++ cnvGenes //TODO: genes from RNA-/DNA-Fusion and RNA-Seq
+
+       } yield genes
 
 
-      (mutatedGeneMatch exists (_ == true))  &&
-      matchesQuery(mtbfile.diagnoses.getOrElse(List.empty).map(_.icd10.get.code), diagnoses) &&
-      matchesQuery(mtbfile.responses.getOrElse(List.empty).map(_.value.code), responses) &&
+      matchesQuery(mutatedGenes, mutatedGenesSelection) &&
+      matchesQuery(mtbfile.diagnoses.getOrElse(List.empty).map(_.icd10.get.code), diagnosesSelection) &&
+      matchesQuery(mtbfile.responses.getOrElse(List.empty).map(_.value.code), responsesSelection) &&
       matchesQuery(usedDrugCodes, usedDrugSel.map(_.code)) &&
       matchesQuery(recommendedDrugCodes, recDrugSel.map(_.code))
 
