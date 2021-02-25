@@ -2,7 +2,7 @@ package de.bwhc.mtb.query.api
 
 
 
-import java.time.LocalDate
+import java.time.YearMonth
 import java.time.temporal.ChronoUnit.YEARS
 
 import de.bwhc.mtb.data.entry.dtos.Patient
@@ -17,7 +17,7 @@ object extensions
     def age: Option[Int] =
       pat.birthDate
         .map(
-          YEARS.between(_,pat.dateOfDeath.getOrElse(LocalDate.now)).toInt
+          YEARS.between(_,pat.dateOfDeath.getOrElse(YearMonth.now)).toInt
         )
 
     def vitalStatus: VitalStatus.Value =
