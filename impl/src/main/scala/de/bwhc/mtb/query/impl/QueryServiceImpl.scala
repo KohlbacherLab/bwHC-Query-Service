@@ -645,4 +645,19 @@ with Logging
   }
 
 
+  //---------------------------------------------------------------------------
+  // bwHC Peer Status Operations
+  //---------------------------------------------------------------------------
+
+  override def peerStatusReport(
+    implicit ec: ExecutionContext
+  ): Future[List[PeerStatusInfo]] = {
+
+     log.info("Compiling bwHC Peer Status Report")
+
+     bwHC.peerStatusReport
+
+  }
+
+
 }

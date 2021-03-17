@@ -10,6 +10,7 @@ trait QueryService
 extends DataOps
    with QueryOps
    with QCReportingOps
+   with StatusOps
 
 
 trait QueryServiceProvider extends SPI[QueryService]

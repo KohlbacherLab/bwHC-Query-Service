@@ -36,6 +36,8 @@ import de.bwhc.mtb.data.entry.dtos.{
 import de.bwhc.mtb.query.api.{
   Querier,
   Query,
+  PeerStatus,
+  PeerStatusInfo,
   PeerToPeerQuery,
   LocalQCReport,
   Snapshot
@@ -86,8 +88,45 @@ with Logging
   private val BWHC_SITE_ORIGIN  = "bwhc-site-origin" 
   private val BWHC_QUERY_USERID = "bwhc-query-userid"
 
+  private val OK = 200
 
-  def requestQCReports(
+
+  override def peerStatusReport(
+    implicit ec: ExecutionContext
+  ): Future[List[PeerStatusInfo]] = {
+
+    import PeerStatus._
+
+
+    val requests =
+      for {
+        (zpm,baseUrl) <- config.peerBaseURLs
+
+        _ = log.debug(s"Site: ${zpm.value}  URL: ${baseUrl.toString}")
+
+        req =
+          wsclient.url(baseUrl.toString + "status")
+            .withRequestTimeout(timeout)
+            .get
+            .map(
+              response =>
+                if (response.status == OK) Online else Offline
+            )
+            .fallbackTo(
+              Future.successful(Offline)
+            )
+            .map(PeerStatusInfo(zpm,_))
+
+      } yield req
+
+   
+     Future.foldLeft(requests)(List.empty[PeerStatusInfo])(_ :+ _) 
+
+  }
+
+
+
+  override def requestQCReports(
     origin: ZPM,
     querier: Querier
   )(
@@ -126,7 +165,7 @@ with Logging
   }
 
 
-  def execute(
+  override def execute(
     q: PeerToPeerQuery
   )(
     implicit ec: ExecutionContext

@@ -26,6 +26,11 @@ object BwHCConnector extends SPILoader(classOf[BwHCConnectorProvider])
 trait BwHCConnector
 {
 
+  def peerStatusReport(
+    implicit ec: ExecutionContext
+  ): Future[List[PeerStatusInfo]]
+
+
   def requestQCReports(
     origin: ZPM,
     querier: Querier

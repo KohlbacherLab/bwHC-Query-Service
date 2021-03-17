@@ -34,7 +34,13 @@ object FakeBwHCConnector extends BwHCConnector
 {
 
 
-  def requestQCReports(
+  override def peerStatusReport(
+    implicit ec: ExecutionContext
+  ): Future[List[PeerStatusInfo]] =
+    Future.successful(List.empty)
+
+
+  override def requestQCReports(
     origin: ZPM,
     querier: Querier
   )(
@@ -48,7 +54,7 @@ object FakeBwHCConnector extends BwHCConnector
   }
 
 
-  def execute(
+  override def execute(
     query: PeerToPeerQuery
   )(
     implicit ec: ExecutionContext
