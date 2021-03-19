@@ -18,6 +18,7 @@ import play.api.libs.ws.ahc.StandaloneAhcWSClient
 import play.api.libs.ws.JsonBodyReadables._
 import play.api.libs.ws.JsonBodyWritables._
 import play.api.libs.ws.DefaultBodyWritables._
+import play.api.libs.ws.DefaultBodyReadables._
 
 import play.api.libs.json.{Json,JsValue}
 
@@ -37,7 +38,7 @@ import de.bwhc.mtb.query.api.{
   Querier,
   Query,
   PeerStatus,
-  PeerStatusInfo,
+  PeerStatusReport,
   PeerToPeerQuery,
   LocalQCReport,
   Snapshot
@@ -93,21 +94,21 @@ with Logging
 
   override def peerStatusReport(
     implicit ec: ExecutionContext
-  ): Future[List[PeerStatusInfo]] = {
+  ): Future[PeerStatusReport] = {
 
     import PeerStatus._
 
-
     val requests =
       for {
-        (zpm,baseUrl) <- config.peerBaseURLs
+        (site,baseUrl) <- config.peerBaseURLs
 
-        _ = log.debug(s"Site: ${zpm.value}  URL: ${baseUrl.toString}")
+        _ = log.debug(s"Site: ${site.value}  URL: ${baseUrl.toString}")
 
         req =
           wsclient.url(baseUrl.toString + "status")
             .withRequestTimeout(timeout)
             .get
+/*
             .map(
               response =>
                 if (response.status == OK) Online else Offline
@@ -115,12 +116,24 @@ with Logging
             .fallbackTo(
               Future.successful(Offline)
             )
-            .map(PeerStatusInfo(zpm,_))
+            .map(PeerStatusReport.Info(site,_))
+*/
+            .map(
+              response =>
+                if (response.status == OK)
+                  PeerStatusReport.Info(site,Online,"-")
+                else
+                  PeerStatusReport.Info(site,Offline,response.body[String])
+            )
+            .recover {
+              case t => PeerStatusReport.Info(site,Offline,t.getMessage)
+            }
 
       } yield req
 
    
-     Future.foldLeft(requests)(List.empty[PeerStatusInfo])(_ :+ _) 
+     Future.foldLeft(requests)(List.empty[PeerStatusReport.Info])(_ :+ _)
+       .map(st => PeerStatusReport(peerStatus = st)) 
 
   }
 

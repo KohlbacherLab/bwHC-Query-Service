@@ -28,7 +28,7 @@ trait BwHCConnector
 
   def peerStatusReport(
     implicit ec: ExecutionContext
-  ): Future[List[PeerStatusInfo]]
+  ): Future[PeerStatusReport]
 
 
   def requestQCReports(

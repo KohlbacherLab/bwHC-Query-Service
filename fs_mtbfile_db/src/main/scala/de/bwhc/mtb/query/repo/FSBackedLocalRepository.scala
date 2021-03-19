@@ -108,10 +108,10 @@ object FSBackedLocalDB
           }
       }
       //------------------------------------------------------
-//      .getOrElse(LazyList.empty[Snapshot[MTBFile]])
       .groupBy(_.data.patient.id)
       .view
-      .mapValues(_.sortWith((s1,s2) => s1.timestamp.isAfter(s2.timestamp))) // sort Snapshots in DECREASING order of timestamp, i.e. to have MOST RECENT as head
+      // sort Snapshots in DECREASING order of timestamp, i.e. to have MOST RECENT as head
+      .mapValues(_.sortWith((s1,s2) => s1.timestamp.isAfter(s2.timestamp)))
       .mapValues(_.toList)
       .toSeq
 
@@ -169,23 +169,6 @@ object FSBackedLocalDB
           .map(_.map(_.code))
           .fold(Set.empty[Medication])(_ ++ _)
 
-/*
-      val mutatedGenes =
-        mtbfile.ngsReports.getOrElse(List.empty)
-          .foldLeft(List.empty[Gene]){
-            (genes,ngs) =>
-              val snvGenes =
-                ngs.simpleVariants.getOrElse(List.empty)
-                  .map(_.gene.code)
-
-              val cnvGenes =
-                ngs.copyNumberVariants.getOrElse(List.empty)
-                  .flatMap(_.reportedAffectedGenes.getOrElse(List.empty).map(_.code))
-
-              genes ++ snvGenes ++ cnvGenes
-              
-          }
-*/
 
       val mutatedGenes =
         for {

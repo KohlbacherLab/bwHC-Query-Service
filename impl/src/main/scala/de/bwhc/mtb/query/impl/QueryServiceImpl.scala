@@ -651,7 +651,7 @@ with Logging
 
   override def peerStatusReport(
     implicit ec: ExecutionContext
-  ): Future[List[PeerStatusInfo]] = {
+  ): Future[PeerStatusReport] = {
 
      log.info("Compiling bwHC Peer Status Report")
 

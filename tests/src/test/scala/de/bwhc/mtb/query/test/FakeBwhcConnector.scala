@@ -36,8 +36,8 @@ object FakeBwHCConnector extends BwHCConnector
 
   override def peerStatusReport(
     implicit ec: ExecutionContext
-  ): Future[List[PeerStatusInfo]] =
-    Future.successful(List.empty)
+  ): Future[PeerStatusReport] =
+    Future.successful(PeerStatusReport(peerStatus = List.empty))
 
 
   override def requestQCReports(

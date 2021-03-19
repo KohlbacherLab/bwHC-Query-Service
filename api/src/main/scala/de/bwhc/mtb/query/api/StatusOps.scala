@@ -28,18 +28,32 @@ object PeerStatus extends Enumeration
   implicit val format = Json.formatEnum(this)
 }
 
-
-final case class PeerStatusInfo
+final case class PeerStatusReport
 (
-  site: ZPM,
-  status: PeerStatus.Value
+  dateTime: LocalDateTime = LocalDateTime.now,
+  peerStatus: List[PeerStatusReport.Info]
 )
 
-object PeerStatusInfo
+object PeerStatusReport
 {
-  
-  implicit val format = Json.format[PeerStatusInfo]
+
+  final case class Info
+  (
+    site: ZPM,
+    status: PeerStatus.Value,
+    details: String
+  )
+
+  object Info
+  {
+    implicit val format = Json.format[Info]
+  }
+
+  implicit val format = Json.format[PeerStatusReport]
+
 }
+
+
 
 
 trait StatusOps
@@ -47,6 +61,6 @@ trait StatusOps
 
   def peerStatusReport(
     implicit ec: ExecutionContext
-  ): Future[List[PeerStatusInfo]]
+  ): Future[PeerStatusReport]
 
 }
