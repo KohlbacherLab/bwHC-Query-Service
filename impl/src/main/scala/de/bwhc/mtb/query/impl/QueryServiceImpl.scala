@@ -280,6 +280,9 @@ with Logging
             val processed =
               for {
                 results <- IorT(submitQuery(queryId,querier,mode,params))
+
+                zpms = results.foldLeft(Set.empty[ZPM])((acc,snp) => acc + snp.data.patient.managingZPM.get)
+
                 query =
                   Query(
                     queryId,
@@ -288,6 +291,7 @@ with Logging
                     mode,
                     params,
                     defaultFilterOn(results.map(_.data)),
+                    zpms,
                     Instant.now
                   )
 
@@ -336,7 +340,13 @@ with Logging
                     .andThen {
                       case Success(Ior.Right(results)) => queryCache.update(updatedQuery -> results)
                     }
-                    .map(_.map(_ => updatedQuery))
+//                    .map(_.map(_ => updatedQuery))
+                    .map(
+                      _.map {
+                        results =>
+                          updatedQuery.copy(zpms = results.foldLeft(Set.empty[ZPM])((acc,snp) => acc + snp.data.patient.managingZPM.get))
+                      }
+                    )
                     
                 else
                   Future.successful(updatedQuery).andThen {

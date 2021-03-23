@@ -47,6 +47,7 @@ final case class Query
   mode: Query.Mode.Value,
   parameters: Query.Parameters,
   filter: Query.Filter,
+  zpms: Set[ZPM],
   lastUpdate: Instant
 )
 
