@@ -10,7 +10,8 @@ import org.scalatest.OptionValues._
 
 import de.bwhc.mtb.data.entry.dtos.{
   Gender,
-  ZPM
+  ZPM,
+  ValueSet
 }
 
 import de.bwhc.util.data.{Interval,ClosedInterval}
@@ -129,15 +130,20 @@ class Tests extends AsyncFlatSpec
   }
 
 
-  import VitalStatus._
-  import Gender._
   import extensions._
+  import de.bwhc.mtb.data.entry.dtos.ValueSets._  // For ValueSet[Gender.Value]
+  import PatientView._                            // For ValueSet[VitalStatus.Value]
 
 
   "Local Query results and operations" must "be valid" in {
 
     val mode   = Mode.Local
     val params = Parameters.empty
+
+    val filterGender       = Gender.Female
+    val filterVitalStatus  = VitalStatus.Alive
+    val vitalStatusDisplay = ValueSet[VitalStatus.Value].displayOf(filterVitalStatus).get
+    val genderDisplay      = ValueSet[Gender.Value].displayOf(filterGender).get
 
     for {
 
@@ -155,8 +161,8 @@ class Tests extends AsyncFlatSpec
                         ApplyFilter(
                           query.id,
                           query.filter.copy(
-                            vitalStatus = Set(Alive),
-                            genders = Set(Female)
+                            vitalStatus = Set(filterVitalStatus),
+                            genders = Set(filterGender)
                           )
                         )
 
@@ -165,10 +171,10 @@ class Tests extends AsyncFlatSpec
       filteredPatients <- service.patientsFrom(filteredQuery.id)
 
       vitalStatusAsExpected =
-        filteredPatients.value.map(_.vitalStatus) must contain only (Alive)
+        filteredPatients.value.map(_.vitalStatus) must contain only (vitalStatusDisplay)
 
       gendersAsExpected =
-        filteredPatients.value.map(_.gender) must contain only (Female)
+        filteredPatients.value.map(_.gender) must contain only (genderDisplay)
 
     } yield succeed
 

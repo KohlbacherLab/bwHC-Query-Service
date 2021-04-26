@@ -9,7 +9,12 @@ import play.api.libs.json.Json
 import de.bwhc.mtb.data.entry.dtos.{
   Gender,
   Patient,
-  ZPM
+  ZPM,
+  ValueSet
+}
+import de.bwhc.mtb.data.entry.views.{
+  Or,
+  NotAvailable
 }
 
 
@@ -18,18 +23,19 @@ object VitalStatus extends Enumeration
   val Alive, Deceased = Value
 
   implicit val format = Json.formatEnum(this)
+
 }
 
 
-
-case class PatientView
+final case class PatientView
 (
   id: Patient.Id,
-  managingZPM: Option[ZPM],
-  gender: Gender.Value,
-  age: Option[Int], //TODO Quantity with Unit of time
-  vitalStatus: VitalStatus.Value
+  managingZPM: NotAvailable Or ZPM,
+  gender: String,
+  age: NotAvailable Or Int,
+  vitalStatus: String
 )
+
 
 object PatientView
 {
@@ -39,21 +45,36 @@ object PatientView
   // stackoverflow bugs when extension ops are imported
   // TODO: look for solution
 
+  import de.bwhc.mtb.data.entry.dtos.ValueSets._
+
   import java.time.temporal.ChronoUnit.YEARS
+
+  implicit val vitalStatusDE: ValueSet[VitalStatus.Value] =
+    ValueSet(
+      "Vital-Status",
+      VitalStatus.Alive    -> "Lebend",
+      VitalStatus.Deceased -> "Verstorben"
+    )
+
 
   implicit val fromPatient: Patient => PatientView = {
     pat =>
       PatientView(
         pat.id,
-        pat.managingZPM,
-        pat.gender,
+        pat.managingZPM.toRight(NotAvailable),
+        ValueSet[Gender.Value].displayOf(pat.gender).get,
         pat.birthDate.map(
           bd => YEARS.between(bd,pat.dateOfDeath.getOrElse(LocalDate.now)).toInt
-        ),
-        pat.dateOfDeath.map(_ => VitalStatus.Deceased).getOrElse(VitalStatus.Alive)
+        ).toRight(NotAvailable),
+        ValueSet[VitalStatus.Value].displayOf(
+          pat.dateOfDeath.map(_ => VitalStatus.Deceased).getOrElse(VitalStatus.Alive)
+        ).get
       )
   }
 
-  implicit val format = Json.format[PatientView]
+
+  import de.bwhc.util.json._
+
+  implicit val format = Json.writes[PatientView]
 
 }
