@@ -50,13 +50,11 @@ trait QueryOps
   ): Future[Option[Query]]
 
 
-
-  def resultsOf(
-    query: PeerToPeerQuery
+  def resultSummaryOf(
+    query: Query.Id,
   )(
     implicit ec: ExecutionContext
-  ): Future[Iterable[Snapshot[MTBFile]]]
-
+  ): Future[Option[ResultSummary]]
 
 
   def patientsFrom(
@@ -82,6 +80,12 @@ trait QueryOps
   ): Future[Option[MTBFileView]]
 
 
+  def ngsSummariesFrom(
+    query: Query.Id,
+  )(
+    implicit ec: ExecutionContext
+  ): Future[Option[Iterable[NGSSummary]]]
+
 
   def therapyRecommendationsFrom(
     query: Query.Id,
@@ -97,11 +101,11 @@ trait QueryOps
   ): Future[Option[Iterable[MolecularTherapyView]]]
 
 
-  def ngsSummariesFrom(
-    query: Query.Id,
+  def resultsOf(
+    query: PeerToPeerQuery
   )(
     implicit ec: ExecutionContext
-  ): Future[Option[Iterable[NGSSummary]]]
+  ): Future[Iterable[Snapshot[MTBFile]]]
 
 
 }

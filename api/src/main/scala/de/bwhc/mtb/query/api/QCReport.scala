@@ -33,11 +33,16 @@ object QCReport
 
   object CompletionLevel extends Enumeration
   {
-     val Sequenced       = Value
-     val CarePlanIssued  = Value
-     val FollowedUp      = Value
-     val PatientDeceased = Value
-
+    val Sequenced       = Value("Sequenziert")
+    val CarePlanIssued  = Value("Mit MTB-Beschluss")
+    val FollowedUp      = Value("Mit Follow-up")
+    val PatientDeceased = Value("Verstorben")
+/*
+    val Sequenced       = Value
+    val CarePlanIssued  = Value
+    val FollowedUp      = Value
+    val PatientDeceased = Value
+*/
     implicit val format = Json.formatEnum(this)
   }
 
@@ -110,7 +115,6 @@ case class GlobalQCReport
   completionStats: Seq[CompletionLevelWithFrequency],
   averageDurations: Seq[TimeSpanWithDuration],
   constituentReports: Seq[LocalQCReport]
-//  constituentReports: Option[Seq[LocalQCReport]]
 ) extends QCReport
 
 

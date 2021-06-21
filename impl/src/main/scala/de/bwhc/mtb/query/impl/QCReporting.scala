@@ -180,7 +180,6 @@ with Logging
       completionStats,
       averageDurations,
       reports.toSeq
-//      Some(reports.toSeq)
     )
 
   }

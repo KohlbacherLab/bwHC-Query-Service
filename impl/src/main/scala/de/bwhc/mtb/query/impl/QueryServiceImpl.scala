@@ -16,6 +16,7 @@ import cats.data.{
   Ior,
   IorNel,
   IorT,
+  OptionT,
   NonEmptyList
 }
 import cats.syntax.apply._
@@ -340,7 +341,6 @@ with Logging
                     .andThen {
                       case Success(Ior.Right(results)) => queryCache.update(updatedQuery -> results)
                     }
-//                    .map(_.map(_ => updatedQuery))
                     .map(
                       _.map {
                         results =>
@@ -480,29 +480,44 @@ with Logging
   }
 
 
-  override def resultsOf(
-    query: PeerToPeerQuery
+  override def resultSummaryOf(
+    query: Query.Id,
   )(
     implicit ec: ExecutionContext
-  ): Future[Iterable[Snapshot[MTBFile]]] = {
-
-    log.info(s"Processing external peer-to-peer MTBFile Query ${query.id.value} from ${query.origin} \nQuery: \n${formattedJson(query)}") 
-
-    db.findMatching(query.parameters) andThen {
-      case Success(snps) => {
-        val resultIds =
-          snps.map(snp => ResultIds(snp.data.patient.id,snp.id))
-
-        log.info(s"ResultSet returned for external peer-to-peer MTBFile Query ${query.id.value}:\n${formattedJson(resultIds)}")
-      }
-    }
-
+  ): Future[Option[ResultSummary]] = {
+    Future {
+      for {
+        mtbFiles <- queryCache.resultsOf(query)
+        qc       =  QCReporting.toLocalQCReport(localSite,mtbFiles)
+      } yield {
+        ResultSummary(
+          query,
+          qc.patientTotal,
+          qc.completionStats 
+        )
+      }   
+    }   
+/*
+    (
+      for {
+        pats   <- OptionT(patientsFrom(query))
+        ngs    <- OptionT(ngsSummariesFrom(query))
+        recs   <- OptionT(therapyRecommendationsFrom(query))
+        molThs <- OptionT(molecularTherapiesFrom(query))
+      } yield ResultSummary(
+        query,
+        pats.size,
+        ngs.size,
+        recs.size,
+        molThs.size
+      )   
+    )
+    .value
+*/
   }
 
 
-
   import de.bwhc.util.mapping.syntax._
-
 
   override def patientsFrom(
     query: Query.Id
@@ -651,6 +666,30 @@ with Logging
 
       } yield allMolTh
     )
+
+  }
+
+
+  //---------------------------------------------------------------------------
+  // bwHC Peer-to-peer query
+  //---------------------------------------------------------------------------
+
+  override def resultsOf(
+    query: PeerToPeerQuery
+  )(
+    implicit ec: ExecutionContext
+  ): Future[Iterable[Snapshot[MTBFile]]] = {
+
+    log.info(s"Processing external peer-to-peer MTBFile Query ${query.id.value} from ${query.origin} \nQuery: \n${formattedJson(query)}") 
+
+    db.findMatching(query.parameters) andThen {
+      case Success(snps) => {
+        val resultIds =
+          snps.map(snp => ResultIds(snp.data.patient.id,snp.id))
+
+        log.info(s"ResultSet returned for external peer-to-peer MTBFile Query ${query.id.value}:\n${formattedJson(resultIds)}")
+      }
+    }
 
   }
 
