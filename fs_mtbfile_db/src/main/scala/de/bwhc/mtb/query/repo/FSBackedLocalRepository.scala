@@ -153,7 +153,7 @@ object FSBackedLocalDB
           .getOrElse(List.empty)
           .map(_.medication.getOrElse(List.empty).toSet)
           .map(_.map(_.code))
-          .fold(Set.empty[Medication])(_ ++ _)
+          .fold(Set.empty[Medication.Code])(_ ++ _)
 
       val usedDrugCodes =
         mtbfile.molecularTherapies
@@ -164,10 +164,10 @@ object FSBackedLocalDB
             case th: OngoingTherapy   => th.medication.getOrElse(List.empty).toSet
             case th: StoppedTherapy   => th.medication.getOrElse(List.empty).toSet 
             case th: CompletedTherapy => th.medication.getOrElse(List.empty).toSet 
-            case _                    => Set.empty[Coding[Medication]]
+            case _                    => Set.empty[Medication.Coding]
           }
           .map(_.map(_.code))
-          .fold(Set.empty[Medication])(_ ++ _)
+          .fold(Set.empty[Medication.Code])(_ ++ _)
 
 
       val mutatedGenes =

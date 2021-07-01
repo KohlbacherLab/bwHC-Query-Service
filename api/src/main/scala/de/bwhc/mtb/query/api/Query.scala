@@ -78,7 +78,7 @@ object Query
 
 
   case class MedicationWithUsage(
-    code: Medication,
+    code: Medication.Code,
     usage: DrugUsage.Value
   )
 

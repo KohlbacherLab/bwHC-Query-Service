@@ -58,10 +58,10 @@ object ParameterValidation extends Validator[String,Query.Parameters]
         .map(_ => symbol)
 
 
-  implicit val mecicationCodeValidator: Validator[String,Medication] = {
-    case med @ Medication(atcCode) =>
-      (atcCode must be (in (atc.entries.map(_.code.value)))
-        otherwise (s"Invalid ATC Medication code $atcCode"))
+  implicit val mecicationCodeValidator: Validator[String,Medication.Code] = {
+    case med @ Medication.Code(code) =>
+      (code must be (in (atc.entries.map(_.code.value)))
+        otherwise (s"Invalid ATC Medication code $code"))
        .map(c => med)
   }
 
@@ -83,7 +83,7 @@ object ParameterValidation extends Validator[String,Query.Parameters]
 
       params.medicationsWithUsage.map(_.map(_.code))
       .fold(
-        validNel[String,List[Medication]](List.empty)
+        validNel[String,List[Medication.Code]](List.empty)
       )(
         _.toList.validateEach
       )      
