@@ -24,6 +24,7 @@ lazy val global = project
      api,
      impl,
      bwhc_connector,
+     bwhc_broker_connector,
      fs_mtbfile_db,
      tests
   )
@@ -68,6 +69,22 @@ lazy val bwhc_connector = project
   .dependsOn(
     impl
   )
+
+lazy val bwhc_broker_connector = project
+  .settings(
+    name := "bwhc-broker-connector",
+    settings,
+    libraryDependencies ++= Seq(
+      dependencies.scalatest,
+      dependencies.play_ws_client,
+      dependencies.play_ws_json,
+      dependencies.scala_xml
+    )
+  )
+  .dependsOn(
+    impl
+  )
+
 
 
 lazy val fs_mtbfile_db = project
@@ -114,7 +131,6 @@ lazy val dependencies =
     val play_ws_client     = "com.typesafe.play"      %% "play-ahc-ws-standalone"  % "2.1.2"
     val play_ws_json       = "com.typesafe.play"      %% "play-ws-standalone-json" % "2.1.2"
     val scala_xml          = "org.scala-lang.modules" %% "scala-xml"               % "2.0.0"
-//    val scala_xml          = "org.scala-lang.modules" %% "scala-xml"               % "2.0.0-M1"
     val bwhc_utils         = "de.bwhc"                %% "utils"                   % "1.0-SNAPSHOT"
     val bwhc_data_api      = "de.bwhc"                %% "data-entry-service-api"  % "1.0-SNAPSHOT"
     val bwhc_dto_gens      = "de.bwhc"                %% "mtb-dto-generators"      % "1.0-SNAPSHOT"
