@@ -127,6 +127,8 @@ with Logging
      Future.foldLeft(requests)(List.empty[PeerStatusReport.Info])(_ :+ _)
        .map(st => PeerStatusReport(peerStatus = st)) 
 */
+    //TODO
+
     ???
   }
 
@@ -139,9 +141,11 @@ with Logging
     implicit ec: ExecutionContext
   ): Future[IorNel[String,List[LocalQCReport]]] = {
 
-    log.debug(s"Requesting LocalQCReports from peers for Querier ${querier.value}")
+    log.debug(s"Requesting LocalQCReports for Querier ${querier.value}")
 
-    val (_,baseUrl) = config.peerBaseURLs.head
+    val (site,baseUrl) = config.peerBaseURLs.head
+
+    log.debug(s"Site: ${site.value}  URL: ${baseUrl.toString}")
 
     wsclient.url(baseUrl.toString + "LocalQCReport")
       .withRequestTimeout(timeout)
@@ -155,7 +159,7 @@ with Logging
         resp => 
           val js = resp.body[JsValue]
 
-          val reports = (js \ "data").asOpt[List[LocalQCReport]]
+          val reports = (js \ "results").asOpt[List[LocalQCReport]]
           val errors  = (js \ "errors").asOpt[NonEmptyList[String]]
 
           Ior.fromOptions(errors,reports).get
@@ -174,21 +178,25 @@ with Logging
     implicit ec: ExecutionContext
   ): Future[IorNel[String,List[Snapshot[MTBFile]]]] = {
 
-    log.debug(s"Executing Peer-to-Peer Query ${q}") //TODO: Query to JSON
+    val jsQuery = Json.toJson(q)
 
-    val (_,baseUrl) = config.peerBaseURLs.head
+    log.debug(s"Executing Peer-to-Peer Query ${Json.prettyPrint(jsQuery)}")
+
+    val (site,baseUrl) = config.peerBaseURLs.head
+
+    log.debug(s"Site: ${site.value}  URL: ${baseUrl.toString}")
 
     wsclient.url(baseUrl.toString + "query")
       .withRequestTimeout(timeout)
-      .post(Json.toJson(q))
+      .post(jsQuery)
       .map {
         resp => 
           val js = resp.body[JsValue]
 
-          val results = (js \ "data").asOpt[SearchSet[Snapshot[MTBFile]]]
+          val results = (js \ "results").asOpt[List[SearchSet[Snapshot[MTBFile]]]]
           val errors  = (js \ "errors").asOpt[NonEmptyList[String]]
 
-          Ior.fromOptions(errors,results.map(_.entries)).get
+          Ior.fromOptions(errors,results.map(_.map(_.entries).flatten)).get
       }
       .recover {
         case t => 
