@@ -497,27 +497,11 @@ with Logging
         )
       }   
     }   
-/*
-    (
-      for {
-        pats   <- OptionT(patientsFrom(query))
-        ngs    <- OptionT(ngsSummariesFrom(query))
-        recs   <- OptionT(therapyRecommendationsFrom(query))
-        molThs <- OptionT(molecularTherapiesFrom(query))
-      } yield ResultSummary(
-        query,
-        pats.size,
-        ngs.size,
-        recs.size,
-        molThs.size
-      )   
-    )
-    .value
-*/
   }
 
 
   import de.bwhc.util.mapping.syntax._
+  import Mappings._
 
   override def patientsFrom(
     query: Query.Id
@@ -530,8 +514,13 @@ with Logging
     Future.successful(
       for {
         rs   <- queryCache resultsOf query 
-        pats =  rs.map(_.patient.mapTo[PatientView])
-      } yield pats
+//        patViews =  rs.map(_.patient.mapTo[PatientView])
+        patViews =
+          rs.map(
+            mtbfile =>
+              (mtbfile.patient,mtbfile.diagnoses.getOrElse(List.empty)).mapTo[PatientView]
+          )
+      } yield patViews
     )
 
 
@@ -615,8 +604,6 @@ with Logging
   )(
     implicit ec: ExecutionContext
   ): Future[Option[Iterable[NGSSummary]]] = {
-
-    import Mappings._
 
     Future.successful(
       for {

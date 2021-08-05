@@ -132,7 +132,7 @@ class Tests extends AsyncFlatSpec
 
   import extensions._
   import de.bwhc.mtb.data.entry.dtos.ValueSets._  // For ValueSet[Gender.Value]
-  import PatientView._                            // For ValueSet[VitalStatus.Value]
+  import de.bwhc.mtb.query.api.Mappings._         // For ValueSet[VitalStatus.Value]
 
 
   "Local Query results and operations" must "be valid" in {

@@ -22,9 +22,9 @@ import de.bwhc.mtb.data.entry.dtos.ZPM
 
 trait Config
 {  
+  def localSite: ZPM
 
-  def peerBaseURLs: Map[ZPM,URL]
-
+  def brokerBaseURL: URL
 }
 
 
@@ -33,43 +33,34 @@ object Config
   
   //-----------------------------------------------------------------------------
 
-  private case class Impl(sites: List[SiteWithBaseURL]) extends Config
+  private case class Impl
+  (
+    localSite: ZPM,
+    baseURL: String
+  )
+  extends Config
   {
-    val peerBaseURLs =
-      sites.map {
-        case SiteWithBaseURL(site,url) =>
-
-          val baseURL =
-            if (url endsWith "/") url else s"$url/"
-
-          (ZPM(site),new URL(baseURL))
-      }
-      .toMap
+    override def brokerBaseURL =
+      new URL(
+        if (baseURL endsWith "/")
+          baseURL
+        else
+          s"$baseURL/"
+      )
   }
-
-  private case class SiteWithBaseURL(site: String, baseURL: String)
-
-  private object Impl
-  {
-    implicit val formatSiteWithBaseURL =
-      Json.format[SiteWithBaseURL]
-
-    implicit val formatConfigImpl =
-      Json.format[Impl]
-  }
-  //-----------------------------------------------------------------------------
 
   
   private def parseXMLConfig(in: InputStream): Impl = {
     val xml = XML.load(in)
-    val sites =
-      for {
-        zpm <- (xml \ "ZPM")
-        site = (zpm \@ "site")
-        url  = (zpm \@ "baseURL")
-      } yield SiteWithBaseURL(site,url)
 
-    Impl(sites.toList)
+    val site =
+      Option(System.getProperty("bwhc.zpm.site"))
+        .getOrElse((xml \ "ZPM" \@ "site"))
+
+    val baseURL =
+      (xml \ "Broker" \@ "baseURL")
+
+    Impl(ZPM(site),baseURL)
   }
 
 
@@ -77,27 +68,14 @@ object Config
 
     // Try reading JSON config by default
     Try {
-      Option(getClass.getClassLoader.getResourceAsStream("bwhcConnectorConfig.json")).get
+      Option(getClass.getClassLoader.getResourceAsStream("bwhcConnectorConfig.xml")).get
     }
     .recoverWith {
       case t =>
         Try { Option(System.getProperty("bwhc.connector.configFile")).get }
           .map(new FileInputStream(_))
     }
-    .flatMap(Using(_)(Json.parse(_).as[Config.Impl]))
-    .recoverWith {
-      // Fall back to XML config
-      case t =>
-        Try {
-          Option(getClass.getClassLoader.getResourceAsStream("bwhcConnectorConfig.xml")).get
-        }
-        .recoverWith {
-          case t =>
-            Try { Option(System.getProperty("bwhc.connector.configFile")).get }
-              .map(new FileInputStream(_))
-        }
-        .flatMap(Using(_)(parseXMLConfig))
-    }
+    .flatMap(Using(_)(parseXMLConfig))
     .get
 
   }

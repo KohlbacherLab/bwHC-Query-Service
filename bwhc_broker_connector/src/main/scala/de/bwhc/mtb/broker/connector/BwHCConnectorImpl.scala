@@ -109,6 +109,7 @@ with Logging
         req =
           wsclient.url(baseUrl.toString + "status")
             .withRequestTimeout(timeout)
+            .addHttpHeaders(BWHC_SITE_ORIGIN -> site.value)
             .get
             .map(
               response =>
@@ -133,7 +134,6 @@ with Logging
   }
 
 
-
   override def requestQCReports(
     origin: ZPM,
     querier: Querier
@@ -143,12 +143,14 @@ with Logging
 
     log.debug(s"Requesting LocalQCReports for Querier ${querier.value}")
 
-    val (site,baseUrl) = config.peerBaseURLs.head
+    val site    = config.localSite
+    val baseUrl = config.brokerBaseURL
 
-    log.debug(s"Site: ${site.value}  URL: ${baseUrl.toString}")
+    log.debug(s"Broker URL: ${baseUrl.toString}")
 
     wsclient.url(baseUrl.toString + "LocalQCReport")
       .withRequestTimeout(timeout)
+      .addHttpHeaders(BWHC_SITE_ORIGIN -> site.value)
       .post(
         Map(
           BWHC_SITE_ORIGIN  -> origin.value,
@@ -182,12 +184,15 @@ with Logging
 
     log.debug(s"Executing Peer-to-Peer Query ${Json.prettyPrint(jsQuery)}")
 
-    val (site,baseUrl) = config.peerBaseURLs.head
+    val site    = config.localSite
+    val baseUrl = config.brokerBaseURL
 
-    log.debug(s"Site: ${site.value}  URL: ${baseUrl.toString}")
+    log.debug(s"Broker URL: ${baseUrl.toString}")
+
 
     wsclient.url(baseUrl.toString + "query")
       .withRequestTimeout(timeout)
+      .addHttpHeaders(BWHC_SITE_ORIGIN -> site.value)
       .post(jsQuery)
       .map {
         resp => 
