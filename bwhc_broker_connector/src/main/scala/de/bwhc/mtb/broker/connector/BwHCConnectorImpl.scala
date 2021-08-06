@@ -99,38 +99,19 @@ with Logging
 
     import PeerStatus._
 
-/*
-    val requests =
-      for {
-        (site,baseUrl) <- config.peerBaseURLs
+    log.debug(s"Requesting bwHC node connection status report")
 
-        _ = log.debug(s"Site: ${site.value}  URL: ${baseUrl.toString}")
+    val site    = config.localSite
+    val baseUrl = config.brokerBaseURL
 
-        req =
-          wsclient.url(baseUrl.toString + "status")
-            .withRequestTimeout(timeout)
-            .addHttpHeaders(BWHC_SITE_ORIGIN -> site.value)
-            .get
-            .map(
-              response =>
-                if (response.status == OK)
-                  PeerStatusReport.Info(site,Online,"-")
-                else
-                  PeerStatusReport.Info(site,Offline,response.body[String])
-            )
-            .recover {
-              case t => PeerStatusReport.Info(site,Offline,t.getMessage)
-            }
+    log.debug(s"Broker URL: ${baseUrl.toString}")
 
-      } yield req
+    wsclient.url(baseUrl.toString + "statusReport")
+      .withRequestTimeout(timeout)
+      .addHttpHeaders(BWHC_SITE_ORIGIN -> site.value)
+      .get
+      .map(_.body[JsValue].as[PeerStatusReport])
 
-   
-     Future.foldLeft(requests)(List.empty[PeerStatusReport.Info])(_ :+ _)
-       .map(st => PeerStatusReport(peerStatus = st)) 
-*/
-    //TODO
-
-    ???
   }
 
 
@@ -148,7 +129,7 @@ with Logging
 
     log.debug(s"Broker URL: ${baseUrl.toString}")
 
-    wsclient.url(baseUrl.toString + "LocalQCReport")
+    wsclient.url(baseUrl.toString + "bwhc/peer2peer/api/LocalQCReport")
       .withRequestTimeout(timeout)
       .addHttpHeaders(BWHC_SITE_ORIGIN -> site.value)
       .post(
@@ -190,7 +171,7 @@ with Logging
     log.debug(s"Broker URL: ${baseUrl.toString}")
 
 
-    wsclient.url(baseUrl.toString + "query")
+    wsclient.url(baseUrl.toString + "bwhc/peer2peer/api/query")
       .withRequestTimeout(timeout)
       .addHttpHeaders(BWHC_SITE_ORIGIN -> site.value)
       .post(jsQuery)
