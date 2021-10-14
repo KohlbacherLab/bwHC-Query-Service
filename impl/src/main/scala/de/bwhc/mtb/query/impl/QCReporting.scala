@@ -189,9 +189,10 @@ with Logging
   implicit class IntOps(val n: Int) extends AnyVal
   {
     def percentOf(total: Int): Double = {
-//      if (total > 0) (n.toDouble)/total*100
-      if (total > 0) ((n.toDouble)/total*100).withDecimals(1)
-      else 0.0
+      if (total > 0)
+        ((n.toDouble)/total*100).withDecimals(1)
+      else
+        0.0
     }
   }
 
@@ -201,9 +202,10 @@ with Logging
   )(
     implicit num: Numeric[T]
   ): Double = {
-//    if (!vs.isEmpty) num.toDouble(vs.sum)/vs.size
-    if (!vs.isEmpty) (num.toDouble(vs.sum)/vs.size).withDecimals(1)
-    else 0.0
+    if (!vs.isEmpty)
+      (num.toDouble(vs.sum)/vs.size).withDecimals(1)
+    else
+      0.0
   }
 
 

@@ -141,7 +141,8 @@ object FSBackedLocalDB
       }
 
       val diagnosesSelection            = params.diagnoses.getOrElse(Set.empty[ICD10GM])
-      val mutatedGenesSelection         = params.mutatedGenes.getOrElse(Set.empty[Gene])
+      val mutatedGenesSelection         = params.mutatedGenes.getOrElse(Set.empty[Gene]).map(_.value.toLowerCase)
+//      val mutatedGenesSelection         = params.mutatedGenes.getOrElse(Set.empty[Gene])
       val responsesSelection            = params.responses.getOrElse(Set.empty[RECIST.Value])
       val medicationsWithUsageSelection = params.medicationsWithUsage.getOrElse(Set.empty[MedicationWithUsage])
 
@@ -181,7 +182,8 @@ object FSBackedLocalDB
             ngs.copyNumberVariants.getOrElse(List.empty)
               .flatMap(_.reportedAffectedGenes.getOrElse(List.empty).map(_.code))
 
-          genes <- snvGenes ++ cnvGenes //TODO: genes from RNA-/DNA-Fusion and RNA-Seq
+//          genes <- snvGenes ++ cnvGenes //TODO: genes from RNA-/DNA-Fusion and RNA-Seq
+          genes <- (snvGenes ++ cnvGenes).map(_.value.toLowerCase)  //TODO: genes from RNA-/DNA-Fusion and RNA-Seq
 
        } yield genes
 
