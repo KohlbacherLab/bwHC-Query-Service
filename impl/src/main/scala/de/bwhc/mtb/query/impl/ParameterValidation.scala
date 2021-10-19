@@ -46,14 +46,10 @@ object ParameterValidation extends Validator[String,Query.Parameters]
         .map(_ => icd10)
   }
 
-  implicit def toHGNCGeneSymbol(gene: Variant.Gene): HGNCGene.Symbol =
-    HGNCGene.Symbol(gene.value)
-
-
 
   implicit val geneSymbolValidator: Validator[String,Variant.Gene] =
     symbol =>
-      (hgnc.geneWithSymbol(symbol) mustBe defined
+      (hgnc.geneWithSymbol(symbol.value) mustBe defined
         otherwise(s"Invalid Gene Symbol ${symbol.value}"))
         .map(_ => symbol)
 
