@@ -30,6 +30,8 @@ object Setup
 
   val tmpDir = createTempDirectory("bwHC_query_test").toFile
 
+  tmpDir.deleteOnExit
+
   val N = 50;
 
   val localSite = ZPM("Tübingen")

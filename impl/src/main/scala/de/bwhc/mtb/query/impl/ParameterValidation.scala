@@ -49,7 +49,7 @@ object ParameterValidation extends Validator[String,Query.Parameters]
 
   implicit val geneSymbolValidator: Validator[String,Variant.Gene] =
     symbol =>
-      (hgnc.geneWithSymbol(symbol.value) mustBe defined
+      (hgnc.geneWithSymbol(symbol.value).headOption mustBe defined
         otherwise(s"Invalid Gene Symbol ${symbol.value}"))
         .map(_ => symbol)
 

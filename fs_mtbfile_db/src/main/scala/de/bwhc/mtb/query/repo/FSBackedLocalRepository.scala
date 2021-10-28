@@ -176,7 +176,9 @@ object FSBackedLocalDB
           ngs <- mtbfile.ngsReports.getOrElse(List.empty)
 
           snvGenes =
-            ngs.simpleVariants.getOrElse(List.empty).map(_.gene.code)
+            ngs.simpleVariants.getOrElse(List.empty)
+              .flatMap(_.gene.map(_.code).toList)
+//              .map(_.gene.code)
 
           cnvGenes =
             ngs.copyNumberVariants.getOrElse(List.empty)
