@@ -56,7 +56,7 @@ object ParameterValidation extends Validator[String,Query.Parameters]
 
   implicit val mecicationCodeValidator: Validator[String,Medication.Code] = {
     case med @ Medication.Code(code) =>
-      (code must be (in (atc.entries.map(_.code.value)))
+      (code must be (in (atc.entries().map(_.code.value)))
         otherwise (s"Invalid ATC Medication code $code"))
        .map(c => med)
   }
