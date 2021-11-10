@@ -47,7 +47,7 @@ object ParameterValidation extends Validator[String,Query.Parameters]
   }
 
 
-  implicit val geneSymbolValidator: Validator[String,Variant.Gene] =
+  implicit val geneSymbolValidator: Validator[String,Variant.GeneSymbol] =
     symbol =>
       (hgnc.geneWithSymbol(symbol.value).headOption mustBe defined
         otherwise(s"Invalid Gene Symbol ${symbol.value}"))
@@ -72,7 +72,7 @@ object ParameterValidation extends Validator[String,Query.Parameters]
       ),
 
       params.mutatedGenes.fold(
-        validNel[String,List[Variant.Gene]](List.empty)
+        validNel[String,List[Variant.GeneSymbol]](List.empty)
       )(
         _.toList.validateEach
       ),

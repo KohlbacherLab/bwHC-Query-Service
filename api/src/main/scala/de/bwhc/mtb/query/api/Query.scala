@@ -89,7 +89,7 @@ object Query
   final case class Parameters
   (
     diagnoses: Option[Set[ICD10GM]],
-    mutatedGenes: Option[Set[Variant.Gene]],
+    mutatedGenes: Option[Set[Variant.GeneSymbol]],
     medicationsWithUsage: Option[Set[MedicationWithUsage]],
     responses: Option[Set[RECIST.Value]]
   )
