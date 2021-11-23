@@ -125,7 +125,7 @@ object FSBackedLocalDB
 
   import Query._
   import DrugUsage._
-  import Variant.GeneSymbol
+  import Gene.HgncId
 
   import scala.language.implicitConversions
 
@@ -137,11 +137,11 @@ object FSBackedLocalDB
         vals: Iterable[T],
         selection: Set[T]
       ): Boolean = {
-        selection.isEmpty || vals.exists(v => selection contains v)
+        selection.isEmpty || vals.exists(selection.contains)
       }
 
       val diagnosesSelection            = params.diagnoses.getOrElse(Set.empty[ICD10GM])
-      val mutatedGenesSelection         = params.mutatedGenes.getOrElse(Set.empty[GeneSymbol]).map(_.value.toLowerCase)
+      val mutatedGeneIdSelection        = params.mutatedGenes.getOrElse(Set.empty[Gene.HgncId])
       val responsesSelection            = params.responses.getOrElse(Set.empty[RECIST.Value])
       val medicationsWithUsageSelection = params.medicationsWithUsage.getOrElse(Set.empty[MedicationWithUsage])
 
@@ -170,26 +170,27 @@ object FSBackedLocalDB
           .fold(Set.empty[Medication.Code])(_ ++ _)
 
 
-      val mutatedGenes =
+      val mutatedGeneIds =
         for {
           ngs <- mtbfile.ngsReports.getOrElse(List.empty)
 
-          snvGenes =
+          snvGeneIds =
             ngs.simpleVariants.getOrElse(List.empty)
-              .flatMap(_.gene.map(_.code).toList)
-//              .map(_.gene.code)
+              .flatMap(_.gene.flatMap(_.hgncId).toList)
 
-          cnvGenes =
+          cnvGeneIds =
             ngs.copyNumberVariants.getOrElse(List.empty)
-              .flatMap(_.reportedAffectedGenes.getOrElse(List.empty).map(_.code))
+              .flatMap(
+                _.reportedAffectedGenes.getOrElse(List.empty)
+                 .flatMap(_.hgncId.toList)
+              )
 
-//          genes <- snvGenes ++ cnvGenes //TODO: genes from RNA-/DNA-Fusion and RNA-Seq
-          genes <- (snvGenes ++ cnvGenes).map(_.value.toLowerCase)  //TODO: genes from RNA-/DNA-Fusion and RNA-Seq
+          geneIds <- snvGeneIds ++ cnvGeneIds //TODO: genes from RNA-/DNA-Fusion and RNA-Seq
 
-       } yield genes
+       } yield geneIds
 
 
-      matchesQuery(mutatedGenes, mutatedGenesSelection) &&
+      matchesQuery(mutatedGeneIds, mutatedGeneIdSelection) &&
       matchesQuery(mtbfile.diagnoses.getOrElse(List.empty).map(_.icd10.get.code), diagnosesSelection) &&
       matchesQuery(mtbfile.responses.getOrElse(List.empty).map(_.value.code), responsesSelection) &&
       matchesQuery(usedDrugCodes, usedDrugSel.map(_.code)) &&

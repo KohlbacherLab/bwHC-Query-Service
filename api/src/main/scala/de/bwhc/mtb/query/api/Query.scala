@@ -27,6 +27,7 @@ import de.bwhc.mtb.data.entry.dtos.{
   Medication,
   RECIST,
   Variant,
+  Gene,
   ZPM
 }
 
@@ -89,7 +90,7 @@ object Query
   final case class Parameters
   (
     diagnoses: Option[Set[ICD10GM]],
-    mutatedGenes: Option[Set[Variant.GeneSymbol]],
+    mutatedGenes: Option[Set[Gene.HgncId]],
     medicationsWithUsage: Option[Set[MedicationWithUsage]],
     responses: Option[Set[RECIST.Value]]
   )

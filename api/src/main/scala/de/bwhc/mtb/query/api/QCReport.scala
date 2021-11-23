@@ -54,6 +54,12 @@ object QCReport
     val ReferralToCarePlan   = Value
     val CarePlanToFollowUp   = Value
 
+/*
+  TODO: activate this
+    val ReferralToSequencing = Value("Überweisung bis Sequenzierung")
+    val ReferralToCarePlan   = Value("Überweisung bis MTB-Beschluss")
+    val CarePlanToFollowUp   = Value("MTB-Beschluss bis Follow-up")
+*/
     implicit val format = Json.formatEnum(this)
   }
 

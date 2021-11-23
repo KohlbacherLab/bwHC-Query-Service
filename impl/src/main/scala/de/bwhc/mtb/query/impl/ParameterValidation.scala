@@ -7,13 +7,13 @@ import cats.data.ValidatedNel
 import de.bwhc.util.data.Validation._
 import de.bwhc.util.data.Validation.dsl._
 import de.bwhc.catalogs.icd._
-import de.bwhc.catalogs.hgnc.{HGNCGene,HGNCCatalog}
+import de.bwhc.catalogs.hgnc.{HGNCGene,HGNCCatalog,HGNCId}
 import de.bwhc.catalogs.med.MedicationCatalog
 
 import de.bwhc.mtb.data.entry.dtos.{
   ICD10GM,
   Medication,
-  Variant
+  Gene
 }
 import de.bwhc.mtb.query.api.Query
 
@@ -47,12 +47,18 @@ object ParameterValidation extends Validator[String,Query.Parameters]
   }
 
 
+  implicit val hgncIdValidator: Validator[String,Gene.HgncId] =
+    id =>
+      hgnc.gene(HGNCId(id.value)) mustBe defined otherwise (
+        s"Invalid HGNC-ID ${id.value}"
+      ) map (_ => id)
+/*
   implicit val geneSymbolValidator: Validator[String,Variant.GeneSymbol] =
     symbol =>
       (hgnc.geneWithSymbol(symbol.value).headOption mustBe defined
         otherwise(s"Invalid Gene Symbol ${symbol.value}"))
         .map(_ => symbol)
-
+*/
 
   implicit val mecicationCodeValidator: Validator[String,Medication.Code] = {
     case med @ Medication.Code(code) =>
@@ -72,7 +78,7 @@ object ParameterValidation extends Validator[String,Query.Parameters]
       ),
 
       params.mutatedGenes.fold(
-        validNel[String,List[Variant.GeneSymbol]](List.empty)
+        validNel[String,List[Gene.HgncId]](List.empty)
       )(
         _.toList.validateEach
       ),

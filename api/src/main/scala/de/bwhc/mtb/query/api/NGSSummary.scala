@@ -28,7 +28,7 @@ final case class NGSSummary
   tumorEntity: NotAvailable Or ICD10Display,
   specimenType: NotAvailable Or String,
   sequencingType: SomaticNGSReport.SequencingType,
-  tumorCellContent: TumorCellContentDisplay,
+  tumorCellContent: NotAvailable Or TumorCellContentDisplay,
   //TODO: add Variant summary?
 )
 
