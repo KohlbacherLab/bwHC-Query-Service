@@ -274,7 +274,8 @@ with Logging
           case Invalid(errors) =>
             Future.successful(errors.leftIor[Query])
 
-          case Valid(_) => {
+//          case Valid(_) => {
+          case Valid(validatedParams) => {
 
             val queryId = queryCache.newQueryId
             
@@ -290,7 +291,8 @@ with Logging
                     querier,
                     Instant.now,
                     mode,
-                    params,
+//                    params,
+                    validatedParams,
                     defaultFilterOn(results.map(_.data)),
                     zpms,
                     Instant.now
@@ -321,7 +323,8 @@ with Logging
           case Invalid(errors) =>
             Future.successful(errors.leftIor[Query])
 
-          case Valid(_) => {
+//          case Valid(_) => {
+          case Valid(validatedParams) => {
 
             queryCache.get(id).map {
 
@@ -330,7 +333,7 @@ with Logging
                 val updatedQuery =
                   oldQuery.copy(
                     mode = mode,
-                    parameters = params,
+                    parameters = validatedParams,
                     lastUpdate = Instant.now
                   )
 

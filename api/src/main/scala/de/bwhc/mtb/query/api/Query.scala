@@ -21,6 +21,7 @@ import play.api.libs.json.Json
 import de.bwhc.util.data.ClosedInterval
 
 import de.bwhc.mtb.data.entry.dtos.{
+  Coding,
   Gender,
   ICD10GM,
   Patient,
@@ -45,6 +46,7 @@ final case class Query
   id: Query.Id,
   querier: Querier,
   submittedAt: Instant,
+//  mode: Coding[Query.Mode.Value],
   mode: Query.Mode.Value,
   parameters: Query.Parameters,
   filter: Query.Filter,
@@ -62,8 +64,10 @@ object Query
 
   object Mode extends Enumeration
   {
-    val Local     = Value("local")
-    val Federated = Value("federated")
+    val Local     = Value("lokal")
+    val Federated = Value("föderiert")
+//    val Local     = Value("local")
+//    val Federated = Value("federated")
 
     implicit val format = Json.formatEnum(this)
   }
@@ -71,28 +75,47 @@ object Query
 
   object DrugUsage  extends Enumeration
   {
-    val Used        = Value("used")
-    val Recommended = Value("recommended")
+//    val Used        = Value("used")
+//    val Recommended = Value("recommended")
+    val Used        = Value("verabreicht")
+    val Recommended = Value("empfohlen")
 
     implicit val format  = Json.formatEnum(this)
   }
 
-
-  case class MedicationWithUsage(
+/*
+  case class MedicationWithUsage
+  (
     code: Medication.Code,
+    usage: DrugUsage.Value
+  )
+*/
+
+  case class MedicationWithUsage
+  (
+    medication: Coding[Medication.Code],
     usage: DrugUsage.Value
   )
 
   implicit val formatMedicationWithUsage =
     Json.format[MedicationWithUsage]
 
- 
+ /*
   final case class Parameters
   (
     diagnoses: Option[Set[ICD10GM]],
     mutatedGenes: Option[Set[Gene.HgncId]],
     medicationsWithUsage: Option[Set[MedicationWithUsage]],
     responses: Option[Set[RECIST.Value]]
+  )
+*/
+
+  final case class Parameters
+  (
+    diagnoses: Option[Set[Coding[ICD10GM]]],
+    mutatedGenes: Option[Set[Coding[Gene.HgncId]]],
+    medicationsWithUsage: Option[Set[MedicationWithUsage]],
+    responses: Option[Set[Coding[RECIST.Value]]]
   )
 
 

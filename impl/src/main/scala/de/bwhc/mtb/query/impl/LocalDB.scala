@@ -68,6 +68,6 @@ trait LocalDB
     patId: Patient.Id
   )(
     implicit ec: ExecutionContext
-  ): Future[History[MTBFile]]
+  ): Future[Option[Snapshot[MTBFile]]]
 
 }

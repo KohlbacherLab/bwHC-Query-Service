@@ -10,7 +10,7 @@ import java.io.{
 import java.time.Instant
 import java.util.UUID.randomUUID
 
-import scala.util.{Failure,Success}
+import scala.util.{Failure,Success,Using}
 import scala.concurrent.{
   Future,
   ExecutionContext
@@ -82,9 +82,11 @@ object FSBackedLocalDB
 
     if (!dataDir.exists) dataDir.mkdirs
 
-    val initData: Seq[(Patient.Id,List[Snapshot[MTBFile]])] =
+    val initData: Seq[(Patient.Id,Snapshot[MTBFile])] =
       Option {
-        dataDir.listFiles((_,n) => n.startsWith("Patient_") && n.endsWith(".json"))
+        dataDir.listFiles(
+          (_,name) => name.startsWith("Patient_") && name.endsWith(".json")
+        )
           .to(LazyList)
           .map(toFileInputStream)
           .map(Json.parse)
@@ -111,8 +113,9 @@ object FSBackedLocalDB
       .groupBy(_.data.patient.id)
       .view
       // sort Snapshots in DECREASING order of timestamp, i.e. to have MOST RECENT as head
-      .mapValues(_.sortWith((s1,s2) => s1.timestamp.isAfter(s2.timestamp)))
-      .mapValues(_.toList)
+//      .mapValues(_.sortWith((s1,s2) => s1.timestamp.isAfter(s2.timestamp)))
+//      .mapValues(_.toList)
+      .mapValues(_.maxBy(_.timestamp))
       .toSeq
 
     new FSBackedLocalDB(
@@ -140,11 +143,17 @@ object FSBackedLocalDB
         selection.isEmpty || vals.exists(selection.contains)
       }
 
+/*
       val diagnosesSelection            = params.diagnoses.getOrElse(Set.empty[ICD10GM])
       val mutatedGeneIdSelection        = params.mutatedGenes.getOrElse(Set.empty[Gene.HgncId])
       val responsesSelection            = params.responses.getOrElse(Set.empty[RECIST.Value])
       val medicationsWithUsageSelection = params.medicationsWithUsage.getOrElse(Set.empty[MedicationWithUsage])
+*/
 
+      val diagnosesSelection            = params.diagnoses.getOrElse(Set.empty).map(_.code)
+      val mutatedGeneIdSelection        = params.mutatedGenes.getOrElse(Set.empty).map(_.code)
+      val responsesSelection            = params.responses.getOrElse(Set.empty).map(_.code)
+      val medicationsWithUsageSelection = params.medicationsWithUsage.getOrElse(Set.empty)
 
       val (usedDrugSel,recDrugSel) = medicationsWithUsageSelection.partition(_.usage == Used)
 
@@ -193,8 +202,10 @@ object FSBackedLocalDB
       matchesQuery(mutatedGeneIds, mutatedGeneIdSelection) &&
       matchesQuery(mtbfile.diagnoses.getOrElse(List.empty).map(_.icd10.get.code), diagnosesSelection) &&
       matchesQuery(mtbfile.responses.getOrElse(List.empty).map(_.value.code), responsesSelection) &&
-      matchesQuery(usedDrugCodes, usedDrugSel.map(_.code)) &&
-      matchesQuery(recommendedDrugCodes, recDrugSel.map(_.code))
+//      matchesQuery(usedDrugCodes, usedDrugSel.map(_.code)) &&
+//      matchesQuery(recommendedDrugCodes, recDrugSel.map(_.code))
+      matchesQuery(usedDrugCodes, usedDrugSel.map(_.medication.code)) &&
+      matchesQuery(recommendedDrugCodes, recDrugSel.map(_.medication.code))
 
   }
 
@@ -203,7 +214,7 @@ object FSBackedLocalDB
 
 class FSBackedLocalDB private (
   dataDir: File,
-  cache: Map[Patient.Id,List[Snapshot[MTBFile]]] 
+  cache: Map[Patient.Id,Snapshot[MTBFile]] 
 )(
   implicit jsf: Format[Snapshot[MTBFile]]
 ) extends LocalDB
@@ -221,29 +232,26 @@ class FSBackedLocalDB private (
     implicit ec: ExecutionContext
   ): Future[Snapshot[MTBFile]] = {
 
-    val patId   = mtbFile.patient.id
-    val history = cache.getOrElse(patId, List.empty)
+    val patId = mtbFile.patient.id
 
-    val saved =
-      for {
-        snp <- Future.successful(Snapshot(newSnapshotId,Instant.now,mtbFile))
-        _   =  cache.update(patId, snp :: history)
-        _   <- Future {
-                 val writer =
-                   new FileWriter(
-                     new File(
-                       dataDir,
-                       s"Patient_${patId.value}_Snapshot_${snp.id.value}.json"
-                     )
-                   )
-                 writer.write(Json.prettyPrint(Json.toJson(snp)))
-                 writer.close
-               }
-      } yield snp
+    val snp = Snapshot(newSnapshotId,Instant.now,mtbFile)
 
-    saved.andThen {
-      case Failure(_) => cache.update(patId,history)
+    Future.fromTry {
+      Using(
+        new FileWriter(
+          new File(
+            dataDir,
+            s"Patient_${patId.value}_Snapshot_${snp.id.value}.json"
+          )
+        )
+      ){
+        _.write(Json.prettyPrint(Json.toJson(snp)))
+      }
     }
+    .andThen {
+      case Success(_) => cache.update(patId,snp)
+    }
+    .map(_ => snp)
 
   }
 
@@ -254,7 +262,7 @@ class FSBackedLocalDB private (
     implicit ec: ExecutionContext
   ): Future[Option[Snapshot[MTBFile]]] = {
     Future.successful(
-      cache.get(patId).flatMap(_.headOption)
+      cache.get(patId)
     )
   }
 
@@ -264,8 +272,21 @@ class FSBackedLocalDB private (
   )(
     implicit ec: ExecutionContext
   ): Future[Option[History[MTBFile]]] = {
-    Future.successful(
-      cache.get(patId).map(History(_))
+    Future {
+      dataDir.listFiles(
+        (_,name) => (name startsWith s"Patient_${patId.value}") && (name endsWith ".json")
+      )
+      .to(LazyList)
+      .map(FSBackedLocalDB.toFileInputStream)
+      .map(Json.parse)
+      .map(Json.fromJson[Snapshot[MTBFile]](_))
+      .map(_.get)
+      .toList
+    }
+    .map(Option(_))
+    .map(
+      _.filterNot(_.isEmpty)
+       .map(History(_))
     )
   }
 
@@ -291,7 +312,7 @@ class FSBackedLocalDB private (
     implicit ec: ExecutionContext
   ): Future[Iterable[Snapshot[MTBFile]]] = {
     Future.successful(
-      cache.values.map(_.headOption).filter(_.isDefined).map(_.get)
+      cache.values
     )
   }
 
@@ -300,16 +321,16 @@ class FSBackedLocalDB private (
     patId: Patient.Id,
   )(
     implicit ec: ExecutionContext
-  ): Future[History[MTBFile]] = {
+  ): Future[Option[Snapshot[MTBFile]]] = {
     Future {
-      dataDir.listFiles((_,n) => n startsWith s"Patient_${patId.value}")
-        .to(LazyList)
-        .foreach(_.delete)
-    }
-    .map { _ =>
       cache.remove(patId)
-        .map(History(_))
-        .getOrElse(History(List.empty[Snapshot[MTBFile]]))
+    } andThen {
+
+      case Success(_) =>
+        dataDir.listFiles(
+          (_,name) => name startsWith s"Patient_${patId.value}"
+        )
+        .foreach(_.delete)
     }
   }
 

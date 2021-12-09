@@ -82,7 +82,6 @@ trait QueryCache
 
 
 
-//class DefaultQueryCache
 object DefaultQueryCache
 extends QueryCache
 with Logging
@@ -92,7 +91,8 @@ with Logging
 
   import java.time.Instant
 
-  import java.util.concurrent.{Executors,TimeUnit}
+  import java.util.concurrent.Executors
+  import java.util.concurrent.TimeUnit.SECONDS
 
   import scala.collection.concurrent._
 
@@ -136,7 +136,7 @@ with Logging
 
     override def run: Unit = {
 
-      log.debug("Running clean-up task for timed out query sessions")
+      log.debug("Running clean-up task for timed out Query sessions")
 
       val timedOutQueryIds =
         queries.values
@@ -161,7 +161,7 @@ with Logging
     new CleanupTask,
     60,
     60,
-    TimeUnit.SECONDS
+    SECONDS
   )
 
   //---------------------------------------------------------------------------
