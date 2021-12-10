@@ -21,6 +21,7 @@ import play.api.libs.json.Json
 import de.bwhc.mtb.data.entry.dtos.{
   MTBFile,
   Patient,
+  Coding
 }
 
 import de.bwhc.mtb.data.entry.views.{
@@ -121,14 +122,16 @@ object QueryOps
     final case class Submit
     (
       querier: Querier,
-      mode: Query.Mode.Value,
+//      mode: Query.Mode.Value,
+      mode: Coding[Query.Mode.Value],
       parameters: Query.Parameters
     ) extends Command
   
     final case class Update
     (
       id: Query.Id,
-      mode: Query.Mode.Value,
+//      mode: Query.Mode.Value,
+      mode: Coding[Query.Mode.Value],
       parameters: Query.Parameters,
       filter: Option[Query.Filter]
     ) extends Command

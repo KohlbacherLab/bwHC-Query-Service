@@ -9,6 +9,7 @@ import org.scalatest.matchers.must.Matchers._
 import org.scalatest.OptionValues._
 
 import de.bwhc.mtb.data.entry.dtos.{
+  Coding,
   Gender,
   ZPM,
   ValueSet
@@ -139,7 +140,7 @@ class Tests extends AsyncFlatSpec
 
   "Local Query results and operations" must "be valid" in {
 
-    val mode   = Mode.Local
+    val mode   = Coding(Mode.Local,None)
     val params = Parameters.empty
 
     val filterGender       = Gender.Female

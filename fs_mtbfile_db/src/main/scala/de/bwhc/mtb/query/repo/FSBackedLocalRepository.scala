@@ -112,10 +112,10 @@ object FSBackedLocalDB
       //------------------------------------------------------
       .groupBy(_.data.patient.id)
       .view
-      // sort Snapshots in DECREASING order of timestamp, i.e. to have MOST RECENT as head
+// sort Snapshots in DECREASING order of timestamp, i.e. to have MOST RECENT as head
 //      .mapValues(_.sortWith((s1,s2) => s1.timestamp.isAfter(s2.timestamp)))
 //      .mapValues(_.toList)
-      .mapValues(_.maxBy(_.timestamp))
+      .mapValues(_.maxBy(_.timestamp)) // get most recent snapshot
       .toSeq
 
     new FSBackedLocalDB(
@@ -155,7 +155,8 @@ object FSBackedLocalDB
       val responsesSelection            = params.responses.getOrElse(Set.empty).map(_.code)
       val medicationsWithUsageSelection = params.medicationsWithUsage.getOrElse(Set.empty)
 
-      val (usedDrugSel,recDrugSel) = medicationsWithUsageSelection.partition(_.usage == Used)
+      val (usedDrugSel,recDrugSel) = medicationsWithUsageSelection.partition(_.usage.code == Used)
+//      val (usedDrugSel,recDrugSel) = medicationsWithUsageSelection.partition(_.usage == Used)
 
       val recommendedDrugCodes =
         mtbfile.recommendations

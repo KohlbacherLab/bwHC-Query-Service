@@ -274,14 +274,14 @@ with Logging
           case Invalid(errors) =>
             Future.successful(errors.leftIor[Query])
 
-//          case Valid(_) => {
           case Valid(validatedParams) => {
 
             val queryId = queryCache.newQueryId
             
             val processed =
               for {
-                results <- IorT(submitQuery(queryId,querier,mode,params))
+//                results <- IorT(submitQuery(queryId,querier,mode,params))
+                results <- IorT(submitQuery(queryId,querier,mode.code,params))
 
                 zpms = results.foldLeft(Set.empty[ZPM])((acc,snp) => acc + snp.data.patient.managingZPM.get)
 
@@ -290,8 +290,8 @@ with Logging
                     queryId,
                     querier,
                     Instant.now,
-                    mode,
-//                    params,
+                    mode.withDisplay,
+//                    mode,
                     validatedParams,
                     defaultFilterOn(results.map(_.data)),
                     zpms,
@@ -323,7 +323,6 @@ with Logging
           case Invalid(errors) =>
             Future.successful(errors.leftIor[Query])
 
-//          case Valid(_) => {
           case Valid(validatedParams) => {
 
             queryCache.get(id).map {
@@ -332,15 +331,18 @@ with Logging
  
                 val updatedQuery =
                   oldQuery.copy(
-                    mode = mode,
+//                    mode = mode,
+                    mode = mode.withDisplay,
                     parameters = validatedParams,
                     lastUpdate = Instant.now
                   )
 
-                if (oldQuery.mode != updatedQuery.mode ||
+//                if (oldQuery.mode != updatedQuery.mode ||
+                if (oldQuery.mode.code != updatedQuery.mode.code ||
                     oldQuery.parameters != updatedQuery.parameters)
 
-                  submitQuery(id,oldQuery.querier,updatedQuery.mode,updatedQuery.parameters)
+//                  submitQuery(id,oldQuery.querier,updatedQuery.mode,updatedQuery.parameters)
+                  submitQuery(id,oldQuery.querier,updatedQuery.mode.code,updatedQuery.parameters)
                     .andThen {
                       case Success(Ior.Right(results)) => queryCache.update(updatedQuery -> results)
                     }

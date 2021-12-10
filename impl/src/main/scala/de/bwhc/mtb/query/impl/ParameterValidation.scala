@@ -48,7 +48,12 @@ object ParameterValidation extends Validator[String,Query.Parameters]
       ) map (
         _.get
       ) map (
-        icd10 => coding.copy(display = Some(icd10.display))
+//        icd10 => coding.copy(display = Some(icd10.display))
+        icd10 =>
+          coding.copy(
+            display = Some(icd10.display),
+            version = Some(icd10.version.toString)
+          )
       )
   }
 
@@ -73,7 +78,15 @@ object ParameterValidation extends Validator[String,Query.Parameters]
       ) map (
        _.get
       ) map (
-        med => mwu.copy(medication = mwu.medication.copy(display = Some(med.name)))
+//        med => mwu.copy(medication = mwu.medication.copy(display = Some(med.name)))
+        med =>
+          mwu.copy(
+            medication =
+              mwu.medication.copy(
+                display = Some(med.name),
+                version = Some(med.version.toString)
+              )
+          )
       )
   }
 
