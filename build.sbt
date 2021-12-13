@@ -105,7 +105,7 @@ lazy val tests = project
     settings,
     libraryDependencies ++= Seq(
       dependencies.scalatest,
-      dependencies.logback,
+//      dependencies.logback,
       dependencies.hgnc_catalog_impl,
       dependencies.icd_catalogs_impl,
       dependencies.med_catalog_impl 
@@ -126,8 +126,8 @@ lazy val tests = project
 lazy val dependencies =
   new {
     val scalatest          = "org.scalatest"          %% "scalatest"               % "3.1.1" % Test
-    val slf4j              = "org.slf4j"              %  "slf4j-api"               % "1.7.26"
-    val logback            = "ch.qos.logback"         %  "logback-classic"         % "1.0.13" % Test
+    val slf4j              = "org.slf4j"              %  "slf4j-api"               % "1.7.32"
+//    val logback            = "ch.qos.logback"         %  "logback-classic"         % "1.0.13" % Test
     val play_ws_client     = "com.typesafe.play"      %% "play-ahc-ws-standalone"  % "2.1.2"
     val play_ws_json       = "com.typesafe.play"      %% "play-ws-standalone-json" % "2.1.2"
     val scala_xml          = "org.scala-lang.modules" %% "scala-xml"               % "2.0.0"

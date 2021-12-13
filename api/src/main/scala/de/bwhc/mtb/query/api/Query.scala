@@ -16,7 +16,6 @@ import cats.data.{
   NonEmptyList
 }
 
-//import play.api.libs.json.Json
 import play.api.libs.json.{Json,Format,Reads,Writes,JsObject}
 
 import de.bwhc.util.data.ClosedInterval
@@ -48,7 +47,6 @@ final case class Query
   querier: Querier,
   submittedAt: Instant,
   mode: Coding[Query.Mode.Value],
-//  mode: Query.Mode.Value,
   parameters: Query.Parameters,
   filter: Query.Filter,
   zpms: Set[ZPM],
@@ -87,17 +85,6 @@ object Query
 
   }
 
-/*
-  implicit val formatModeCoding =
-    Format[Coding[Mode.Value]](
-      js => (js \ "code").validate[Mode.Value].map(
-        c => Coding(c,BwHCValueSet[Mode.Value].displayOf(c))
-      ),
-      Json.writes[Coding[Mode.Value]].contramap(
-        c => c.copy(display = BwHCValueSet[Mode.Value].displayOf(c.code))
-      )
-    )
-*/
 
   object DrugUsage  extends Enumeration
   {
@@ -119,17 +106,6 @@ object Query
       Coding.System[DrugUsage.Value](BwHCValueSet[DrugUsage.Value].name)
   }
 
-/*
-  implicit val formatDrugUsageCoding =
-    Format[Coding[DrugUsage.Value]](
-      js => (js \ "code").validate[DrugUsage.Value].map(
-        c => Coding(c,BwHCValueSet[DrugUsage.Value].displayOf(c))
-      ),
-      Json.writes[Coding[DrugUsage.Value]].contramap(
-        c => c.copy(display = BwHCValueSet[DrugUsage.Value].displayOf(c.code))
-      )
-    )
-*/
 
   case class MedicationWithUsage
   (
