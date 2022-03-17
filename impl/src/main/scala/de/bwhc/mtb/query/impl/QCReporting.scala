@@ -84,7 +84,11 @@ with Logging
         PatientDeceased -> mtbFiles.filter(_.patient.dateOfDeath.isDefined).size
       )
       .map {
-        case (lvl,n) => CompletionLevelWithFrequency(lvl,Frequency(n, (n percentOf total)))
+        case (lvl,n) =>
+          CompletionLevelWithFrequency(
+            lvl,
+            Frequency(n, (n percentOf total))
+          )
       }
 
     // Average durations
@@ -149,14 +153,18 @@ with Logging
       toMapSeq(
         reports.map(
           _.completionStats
-            .map { case CompletionLevelWithFrequency(lvl,Frequency(n,_)) => (lvl,n) }
-            .toMap
+           .map { case CompletionLevelWithFrequency(lvl,Frequency(n,_)) => (lvl,n) }
+           .toMap
         )
       )
       .view
       .mapValues(_.sum)
       .map {
-        case (lvl,n) => CompletionLevelWithFrequency(lvl,Frequency(n, (n percentOf total)))
+        case (lvl,n) =>
+          CompletionLevelWithFrequency(
+            lvl,
+            Frequency(n, (n percentOf total))
+          )
       }
       .toSeq
 

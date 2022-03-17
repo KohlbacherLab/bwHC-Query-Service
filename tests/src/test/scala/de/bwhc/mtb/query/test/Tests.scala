@@ -4,12 +4,15 @@ package de.bwhc.mtb.query.test
 import java.time.LocalDateTime
 import java.nio.file.Files.createTempDirectory
 
+import scala.math.Ordering.Double.TotalOrdering
+
 import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.must.Matchers._
 import org.scalatest.OptionValues._
 
 import de.bwhc.mtb.data.entry.dtos.{
   Coding,
+  ICD10GM,
   Gender,
   ZPM,
   ValueSet
@@ -22,8 +25,7 @@ import Query._
 import QueryOps.Command._
 import QCReport._
 
-import scala.math.Ordering.Double.TotalOrdering
-
+import de.bwhc.catalogs.icd.{ICD10GMCatalogs,ICDO3Catalogs}
 
 
 object Setup
@@ -44,6 +46,9 @@ object Setup
   System.setProperty("bwhc.query.data.generate", N.toString)
 
   lazy val serviceTry = QueryService.getInstance
+
+  val icd10s =
+    ICD10GMCatalogs.getInstance.get.codings()
 
 }
 
@@ -183,5 +188,34 @@ class Tests extends AsyncFlatSpec
 
   }
 
+
+  "Query by ICD-10-GM super-category" should "return sub-categories" in {
+
+    val mode = Coding(Mode.Local,None)
+
+//    val code = "C25.1"
+//    val superClass =
+//      icd10s.find(_.code.value == code)
+//        .flatMap(c => icd10s.find(_.code == c.superClass.get)).get
+
+    val params =
+      Parameters.empty.copy(
+//        diagnoses = Some(Set(Coding(ICD10GM(superClass.code.value),None)))
+        diagnoses = Some(Set(Coding(ICD10GM("C25"),None)))
+      )
+
+    for {
+
+      result <- service ! Submit(querier,mode,params)
+
+      query = result.onlyRight.value
+
+      patients <- service.patientsFrom(query.id)
+
+      patientsNonEmpty = patients must not be empty
+
+    } yield patientsNonEmpty
+
+  }
 
 }

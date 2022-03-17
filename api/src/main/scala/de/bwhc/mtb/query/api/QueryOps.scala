@@ -122,7 +122,6 @@ object QueryOps
     final case class Submit
     (
       querier: Querier,
-//      mode: Query.Mode.Value,
       mode: Coding[Query.Mode.Value],
       parameters: Query.Parameters
     ) extends Command
@@ -130,7 +129,6 @@ object QueryOps
     final case class Update
     (
       id: Query.Id,
-//      mode: Query.Mode.Value,
       mode: Coding[Query.Mode.Value],
       parameters: Query.Parameters,
       filter: Option[Query.Filter]

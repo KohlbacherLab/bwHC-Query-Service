@@ -105,7 +105,6 @@ lazy val tests = project
     settings,
     libraryDependencies ++= Seq(
       dependencies.scalatest,
-//      dependencies.logback,
       dependencies.hgnc_catalog_impl,
       dependencies.icd_catalogs_impl,
       dependencies.med_catalog_impl 

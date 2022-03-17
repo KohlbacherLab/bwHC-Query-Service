@@ -24,6 +24,7 @@ import de.bwhc.mtb.data.entry.dtos.{
   Coding,
   Gender,
   ICD10GM,
+  ICDO3M,
   Patient,
   Medication,
   RECIST,
@@ -90,6 +91,7 @@ object Query
   {
     val Used        = Value("used")
     val Recommended = Value("recommended")
+//    val Both        = Value("used+recommended")
 
     implicit val format  = Json.formatEnum(this)
 
@@ -99,6 +101,7 @@ object Query
         List(
           Concept(Used,       "Verabreicht"),
           Concept(Recommended,"Empfohlen")
+//          Concept(Both,       "Empfohlen & Verabreicht")
         )
       )
 
@@ -120,6 +123,7 @@ object Query
   final case class Parameters
   (
     diagnoses: Option[Set[Coding[ICD10GM]]],
+    tumorMorphology: Option[Set[Coding[ICDO3M]]],
     mutatedGenes: Option[Set[Coding[Gene.HgncId]]],
     medicationsWithUsage: Option[Set[MedicationWithUsage]],
     responses: Option[Set[Coding[RECIST.Value]]]
@@ -130,6 +134,7 @@ object Query
   {
     val empty = 
       Parameters(
+        None,
         None,
         None,
         None,

@@ -280,7 +280,6 @@ with Logging
             
             val processed =
               for {
-//                results <- IorT(submitQuery(queryId,querier,mode,params))
                 results <- IorT(submitQuery(queryId,querier,mode.code,params))
 
                 zpms = results.foldLeft(Set.empty[ZPM])((acc,snp) => acc + snp.data.patient.managingZPM.get)
@@ -291,7 +290,6 @@ with Logging
                     querier,
                     Instant.now,
                     mode.withDisplay,
-//                    mode,
                     validatedParams,
                     defaultFilterOn(results.map(_.data)),
                     zpms,
@@ -331,17 +329,14 @@ with Logging
  
                 val updatedQuery =
                   oldQuery.copy(
-//                    mode = mode,
                     mode = mode.withDisplay,
                     parameters = validatedParams,
                     lastUpdate = Instant.now
                   )
 
-//                if (oldQuery.mode != updatedQuery.mode ||
                 if (oldQuery.mode.code != updatedQuery.mode.code ||
                     oldQuery.parameters != updatedQuery.parameters)
 
-//                  submitQuery(id,oldQuery.querier,updatedQuery.mode,updatedQuery.parameters)
                   submitQuery(id,oldQuery.querier,updatedQuery.mode.code,updatedQuery.parameters)
                     .andThen {
                       case Success(Ior.Right(results)) => queryCache.update(updatedQuery -> results)
@@ -436,7 +431,7 @@ with Logging
         Future.successful(List.empty[Snapshot[MTBFile]].rightIor[String].toIorNel)
 
     val localResults =
-      db.findMatching(params)
+      db.findMatching(ParameterProcessor(params))
         .map(_.toList)
         .andThen {
           case Success(snps) => {
@@ -519,7 +514,6 @@ with Logging
     Future.successful(
       for {
         rs   <- queryCache resultsOf query 
-//        patViews =  rs.map(_.patient.mapTo[PatientView])
         patViews =
           rs.map(
             mtbfile =>
@@ -674,7 +668,7 @@ with Logging
 
     log.info(s"Processing external peer-to-peer MTBFile Query ${query.id.value} from ${query.origin} \nQuery: \n${formattedJson(query)}") 
 
-    db.findMatching(query.parameters) andThen {
+    db.findMatching(ParameterProcessor(query.parameters)) andThen {
       case Success(snps) => {
         val resultIds =
           snps.map(snp => ResultIds(snp.data.patient.id,snp.id))

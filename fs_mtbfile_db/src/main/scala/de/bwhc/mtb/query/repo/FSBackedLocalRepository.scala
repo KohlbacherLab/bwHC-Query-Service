@@ -113,8 +113,6 @@ object FSBackedLocalDB
       .groupBy(_.data.patient.id)
       .view
 // sort Snapshots in DECREASING order of timestamp, i.e. to have MOST RECENT as head
-//      .mapValues(_.sortWith((s1,s2) => s1.timestamp.isAfter(s2.timestamp)))
-//      .mapValues(_.toList)
       .mapValues(_.maxBy(_.timestamp)) // get most recent snapshot
       .toSeq
 
@@ -143,20 +141,13 @@ object FSBackedLocalDB
         selection.isEmpty || vals.exists(selection.contains)
       }
 
-/*
-      val diagnosesSelection            = params.diagnoses.getOrElse(Set.empty[ICD10GM])
-      val mutatedGeneIdSelection        = params.mutatedGenes.getOrElse(Set.empty[Gene.HgncId])
-      val responsesSelection            = params.responses.getOrElse(Set.empty[RECIST.Value])
-      val medicationsWithUsageSelection = params.medicationsWithUsage.getOrElse(Set.empty[MedicationWithUsage])
-*/
-
       val diagnosesSelection            = params.diagnoses.getOrElse(Set.empty).map(_.code)
+      val morphologySelection           = params.tumorMorphology.getOrElse(Set.empty).map(_.code)
       val mutatedGeneIdSelection        = params.mutatedGenes.getOrElse(Set.empty).map(_.code)
       val responsesSelection            = params.responses.getOrElse(Set.empty).map(_.code)
       val medicationsWithUsageSelection = params.medicationsWithUsage.getOrElse(Set.empty)
 
       val (usedDrugSel,recDrugSel) = medicationsWithUsageSelection.partition(_.usage.code == Used)
-//      val (usedDrugSel,recDrugSel) = medicationsWithUsageSelection.partition(_.usage == Used)
 
       val recommendedDrugCodes =
         mtbfile.recommendations
@@ -202,9 +193,8 @@ object FSBackedLocalDB
 
       matchesQuery(mutatedGeneIds, mutatedGeneIdSelection) &&
       matchesQuery(mtbfile.diagnoses.getOrElse(List.empty).map(_.icd10.get.code), diagnosesSelection) &&
+      matchesQuery(mtbfile.histologyReports.getOrElse(List.empty).flatMap(_.tumorMorphology).map(_.value.code), morphologySelection) &&
       matchesQuery(mtbfile.responses.getOrElse(List.empty).map(_.value.code), responsesSelection) &&
-//      matchesQuery(usedDrugCodes, usedDrugSel.map(_.code)) &&
-//      matchesQuery(recommendedDrugCodes, recDrugSel.map(_.code))
       matchesQuery(usedDrugCodes, usedDrugSel.map(_.medication.code)) &&
       matchesQuery(recommendedDrugCodes, recDrugSel.map(_.medication.code))
 
