@@ -581,6 +581,7 @@ with Logging
                 (
                  mtbfile.carePlans.getOrElse(List.empty),
                  mtbfile.diagnoses.getOrElse(List.empty),
+                 mtbfile.ecogStatus.getOrElse(List.empty),
                  mtbfile.recommendations.getOrElse(List.empty),
                  mtbfile.studyInclusionRequests.getOrElse(List.empty),
                  mtbfile.geneticCounsellingRequests.getOrElse(List.empty)

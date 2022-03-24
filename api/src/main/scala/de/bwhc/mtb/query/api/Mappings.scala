@@ -2,6 +2,7 @@ package de.bwhc.mtb.query.api
 
 
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 
 import de.bwhc.mtb.data.entry.dtos.{
@@ -65,7 +66,10 @@ trait Mappings
   }
 
 
-   implicit val patientAndDiagnosesToView: ((Patient,List[Diagnosis])) => PatientView = {
+  val formatter = DateTimeFormatter.ofPattern("MM.yyyy")
+
+
+  implicit val patientAndDiagnosesToView: ((Patient,List[Diagnosis])) => PatientView = {
     case (pat,diagnoses) =>
       val diags =
         diagnoses.map(_.mapTo[DiagnosisView].icd10.toOption)
@@ -84,9 +88,18 @@ trait Mappings
         pat.birthDate.map(
           bd => YEARS.between(bd,pat.dateOfDeath.getOrElse(LocalDate.now)).toInt
         ).toRight(NotAvailable),
-        ValueSet[VitalStatus.Value].displayOf(
-          pat.dateOfDeath.map(_ => VitalStatus.Deceased).getOrElse(VitalStatus.Alive)
-        ).get
+//        ValueSet[VitalStatus.Value].displayOf(
+//          pat.dateOfDeath.map(_ => VitalStatus.Deceased).getOrElse(VitalStatus.Alive)
+//        ).get
+        pat.dateOfDeath
+          .map(formatter.format)
+          .flatMap(
+            d =>
+              ValueSet[VitalStatus.Value].displayOf(VitalStatus.Deceased)
+                .map(_ + s" ($d)")
+          )
+          .orElse(ValueSet[VitalStatus.Value].displayOf(VitalStatus.Alive))
+          .get
       )
 
   }

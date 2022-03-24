@@ -190,9 +190,13 @@ class Tests extends AsyncFlatSpec
 
 
   "Query by ICD-10-GM super-category" should "return sub-categories" in {
-
+  
     val mode = Coding(Mode.Local,None)
 
+   //TODO: instead of hard-coding "C25",
+   // find dynamic way of getting an ICD-10 super-class for a code
+   // that certainly occurs in the in-mem random generated data sets
+   
 //    val code = "C25.1"
 //    val superClass =
 //      icd10s.find(_.code.value == code)
