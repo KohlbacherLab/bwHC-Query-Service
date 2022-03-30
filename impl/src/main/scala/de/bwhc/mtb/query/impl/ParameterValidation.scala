@@ -20,10 +20,10 @@ import de.bwhc.mtb.data.entry.dtos.{
   ValueSet,
   ValueSets,
 }
-import de.bwhc.mtb.query.api.Query
+import de.bwhc.mtb.query.api.Query._
 
 
-object ParameterValidation extends Validator[String,Query.Parameters]
+object ParameterValidation extends Validator[String,Parameters]
 {
 
   import cats.syntax.apply._
@@ -90,26 +90,32 @@ object ParameterValidation extends Validator[String,Query.Parameters]
   }
 
 
-  implicit val medicationCodeValidator: Validator[String,Query.MedicationWithUsage] = {
-    mwu =>
-      atc.entries().find(_.code.value == mwu.medication.code.value) mustBe defined otherwise (
-        s"Invalid ATC Medication code ${mwu.medication.code.value}"
+  implicit val medicationCodeValidator: Validator[String,MedicationWithUsage] = {
+
+    case mwu @ MedicationWithUsage(medication,usageSet) =>
+
+      atc.entries().find(_.code.value == medication.code.value) mustBe defined otherwise (
+        s"Invalid ATC Medication code ${medication.code.value}"
       ) map (
        _.get
       ) map (
         med =>
           mwu.copy(
             medication =
-              mwu.medication.copy(
+              medication.copy(
                 display = Some(med.name),
                 version = Some(med.version.toString)
+              ),
+            usage =
+              usageSet.map(
+                u => u.copy(display = ValueSet[DrugUsage.Value].displayOf(u.code))
               )
           )
       )
   }
 
 
-  override def apply(params: Query.Parameters): ValidatedNel[String,Query.Parameters] = {
+  override def apply(params: Parameters): ValidatedNel[String,Parameters] = {
 
     import ValueSets._
 
@@ -124,7 +130,7 @@ object ParameterValidation extends Validator[String,Query.Parameters]
     )
     .mapN {
       (diags,tumorMorphology,genes,mwus) =>
-        Query.Parameters(
+        Parameters(
           Some(diags.toSet),
           Some(tumorMorphology.toSet),
           Some(genes.toSet),

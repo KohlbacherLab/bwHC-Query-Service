@@ -147,7 +147,31 @@ object FSBackedLocalDB
       val responsesSelection            = params.responses.getOrElse(Set.empty).map(_.code)
       val medicationsWithUsageSelection = params.medicationsWithUsage.getOrElse(Set.empty)
 
-      val (usedDrugSel,recDrugSel) = medicationsWithUsageSelection.partition(_.usage.code == Used)
+//      val (usedDrugSel,recDrugSel) = medicationsWithUsageSelection.partition(_.usage.code == Used)
+
+      val (
+        anyUsageDrugSelection,
+        recommendedDrugSelection,
+        usedDrugSelection,
+        bothUsagesDrugSelection
+      ) =
+        medicationsWithUsageSelection.foldLeft(
+          (
+           Set.empty[Medication.Code],
+           Set.empty[Medication.Code],
+           Set.empty[Medication.Code],
+           Set.empty[Medication.Code]
+          )
+        ){
+          case ((any,recomm,used,both),Query.MedicationWithUsage(med,usages)) =>
+            usages match {
+              case s if (s.exists(_.code == Recommended) && s.exists(_.code == Used)) => (any, recomm, used, both + med.code) 
+              case s if s.exists(_.code == Recommended)                               => (any, recomm + med.code, used, both) 
+              case s if s.exists(_.code == Used)                                      => (any, recomm, used + med.code, both) 
+              case _                                                                  => (any + med.code, recomm, used, both)
+            }
+        }
+
 
       val recommendedDrugCodes =
         mtbfile.recommendations
@@ -186,7 +210,9 @@ object FSBackedLocalDB
                  .flatMap(_.hgncId.toList)
               )
 
-          geneIds <- snvGeneIds ++ cnvGeneIds //TODO: genes from RNA-/DNA-Fusion and RNA-Seq
+          geneIds <- snvGeneIds ++ cnvGeneIds
+
+          //TODO: genes from RNA-/DNA-Fusion and RNA-Seq
 
        } yield geneIds
 
@@ -195,8 +221,12 @@ object FSBackedLocalDB
       matchesQuery(mtbfile.diagnoses.getOrElse(List.empty).map(_.icd10.get.code), diagnosesSelection) &&
       matchesQuery(mtbfile.histologyReports.getOrElse(List.empty).flatMap(_.tumorMorphology).map(_.value.code), morphologySelection) &&
       matchesQuery(mtbfile.responses.getOrElse(List.empty).map(_.value.code), responsesSelection) &&
-      matchesQuery(usedDrugCodes, usedDrugSel.map(_.medication.code)) &&
-      matchesQuery(recommendedDrugCodes, recDrugSel.map(_.medication.code))
+//      matchesQuery(usedDrugCodes, usedDrugSel.map(_.medication.code)) &&
+//      matchesQuery(recommendedDrugCodes, recDrugSel.map(_.medication.code))
+      matchesQuery(recommendedDrugCodes & usedDrugCodes, bothUsagesDrugSelection) &&
+      matchesQuery(recommendedDrugCodes, recommendedDrugSelection) &&
+      matchesQuery(usedDrugCodes, usedDrugSelection ) &&
+      matchesQuery(recommendedDrugCodes ++ usedDrugCodes, anyUsageDrugSelection)
 
   }
 

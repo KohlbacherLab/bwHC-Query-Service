@@ -62,8 +62,8 @@ object Query
 
   implicit val formatId = Json.valueFormat[Id]
 
-  import de.bwhc.mtb.data.entry.dtos.{ValueSet => BwHCValueSet}
-  import BwHCValueSet.Concept
+  import de.bwhc.mtb.data.entry.dtos.{ValueSet => VSet}
+  import VSet.Concept
 
   object Mode extends Enumeration
   {
@@ -73,7 +73,7 @@ object Query
     implicit val format = Json.formatEnum(this)
 
     implicit val valueSetDE =
-      BwHCValueSet[Mode.Value](
+      VSet[Mode.Value](
         "Query-Mode",
         List(
           Concept(Local,    "Lokal"),
@@ -82,7 +82,7 @@ object Query
       )
 
     implicit val system =
-      Coding.System[Mode.Value](BwHCValueSet[Mode.Value].name)
+      Coding.System[Mode.Value](VSet[Mode.Value].name)
 
   }
 
@@ -91,29 +91,28 @@ object Query
   {
     val Used        = Value("used")
     val Recommended = Value("recommended")
-//    val Both        = Value("used+recommended")
 
     implicit val format  = Json.formatEnum(this)
 
     implicit val valueSetDE =
-      BwHCValueSet[DrugUsage.Value](
+      VSet[DrugUsage.Value](
         "Drug-Usage",
         List(
           Concept(Used,       "Verabreicht"),
           Concept(Recommended,"Empfohlen")
-//          Concept(Both,       "Empfohlen & Verabreicht")
         )
       )
 
     implicit val system =
-      Coding.System[DrugUsage.Value](BwHCValueSet[DrugUsage.Value].name)
+      Coding.System[DrugUsage.Value](VSet[DrugUsage.Value].name)
   }
 
 
   case class MedicationWithUsage
   (
     medication: Coding[Medication.Code],
-    usage: Coding[DrugUsage.Value]
+//    usage: Coding[DrugUsage.Value]
+    usage: Set[Coding[DrugUsage.Value]]
   )
 
   implicit val formatMedicationWithUsage =
