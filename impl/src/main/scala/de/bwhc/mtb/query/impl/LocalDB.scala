@@ -49,6 +49,14 @@ trait LocalDB
   ): Future[Option[Snapshot[MTBFile]]]
 
 
+  def snapshot(
+    patId: Patient.Id,
+    snpId: Option[Snapshot.Id]
+  )(
+    implicit ec: ExecutionContext
+  ): Future[Option[Snapshot[MTBFile]]]
+
+
   def history(
     patId: Patient.Id
   )(

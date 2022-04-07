@@ -287,6 +287,34 @@ class FSBackedLocalDB private (
     )
   }
 
+  def snapshot(
+    patId: Patient.Id,
+    optSnpId: Option[Snapshot.Id]
+  )(
+    implicit ec: ExecutionContext
+  ): Future[Option[Snapshot[MTBFile]]] = {
+    
+    optSnpId match {
+
+      case None => latestSnapshot(patId)
+
+      case Some(Snapshot.Id(snp)) =>
+        Future {
+          dataDir.listFiles(
+            (_,name) => 
+              (name startsWith s"Patient_${patId.value}") && 
+              (name contains s"Snapshot_$snp") && 
+              (name endsWith ".json")
+        )
+        .to(LazyList)
+        .headOption
+        .map(FSBackedLocalDB.toFileInputStream)
+        .map(Json.parse)
+        .map(Json.fromJson[Snapshot[MTBFile]](_))
+        .map(_.get)
+      }
+    }
+  }
 
   def history(
     patId: Patient.Id

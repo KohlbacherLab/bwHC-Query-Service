@@ -24,6 +24,7 @@ import play.api.libs.json.{Json,JsValue}
 
 import cats.data.{Ior,IorNel}
 import cats.syntax.ior._
+import cats.syntax.either._
 import cats.instances.list._
 
 
@@ -40,6 +41,7 @@ import de.bwhc.mtb.query.api.{
   PeerStatus,
   PeerStatusReport,
   PeerToPeerQuery,
+  PeerToPeerMTBFileRequest,
   LocalQCReport,
   Snapshot
 }
@@ -108,16 +110,6 @@ with Logging
           wsclient.url(baseUrl.toString + "status")
             .withRequestTimeout(timeout)
             .get
-/*
-            .map(
-              response =>
-                if (response.status == OK) Online else Offline
-            )
-            .fallbackTo(
-              Future.successful(Offline)
-            )
-            .map(PeerStatusReport.Info(site,_))
-*/
             .map(
               response =>
                 if (response.status == OK)
@@ -206,6 +198,47 @@ with Logging
       } yield req
 
     Future.foldLeft(requests)(List.empty[Snapshot[MTBFile]].rightIor[String].toIorNel)(_ combine _)
+
+  }
+
+  override def execute(
+    site: ZPM,
+    mfreq: PeerToPeerMTBFileRequest
+  )(
+    implicit ec: ExecutionContext
+  ): Future[Either[String,Option[Snapshot[MTBFile]]]] = {
+
+    log.debug(s"Executing MTBFile Snapshot Request ${mfreq}") //TODO: Query to JSON
+
+    config.peerBaseURLs.get(site) match {
+
+      case None =>
+        Future.successful(
+          s"Invalid bwHC site ${site.value}".asLeft[Option[Snapshot[MTBFile]]]
+        )
+
+      case Some(baseUrl) => {
+
+        log.debug(s"Site: ${site.value}  URL: ${baseUrl.toString}")
+
+        wsclient.url(baseUrl.toString + "MTBFile:request")
+          .withRequestTimeout(timeout)
+          .post(Json.toJson(mfreq))
+          .map {
+            resp =>
+              resp.status match {
+                case 200 => Some(resp.body[JsValue].as[Snapshot[MTBFile]])
+                case 404 => None
+              }
+          } //TODO: handle validation errors
+          .map(_.asRight[String])
+          .recover {
+            case t => 
+              s"Error in Peer-to-peer Query response from bwHC Site ${site.value}: ${t.getMessage}".asLeft[Option[Snapshot[MTBFile]]]
+          }
+      
+      }
+    }
 
   }
 

@@ -62,8 +62,8 @@ object Query
 
   implicit val formatId = Json.valueFormat[Id]
 
-  import de.bwhc.mtb.data.entry.dtos.{ValueSet => VSet}
-  import VSet.Concept
+  import de.bwhc.mtb.data.entry.dtos.{ValueSet => ValSet}
+  import ValSet.Concept
 
   object Mode extends Enumeration
   {
@@ -73,7 +73,7 @@ object Query
     implicit val format = Json.formatEnum(this)
 
     implicit val valueSetDE =
-      VSet[Mode.Value](
+      ValSet[Mode.Value](
         "Query-Mode",
         List(
           Concept(Local,    "Lokal"),
@@ -82,7 +82,7 @@ object Query
       )
 
     implicit val system =
-      Coding.System[Mode.Value](VSet[Mode.Value].name)
+      Coding.System[Mode.Value](ValSet[Mode.Value].name)
 
   }
 
@@ -95,7 +95,7 @@ object Query
     implicit val format  = Json.formatEnum(this)
 
     implicit val valueSetDE =
-      VSet[DrugUsage.Value](
+      ValSet[DrugUsage.Value](
         "Drug-Usage",
         List(
           Concept(Used,       "Verabreicht"),
@@ -104,7 +104,7 @@ object Query
       )
 
     implicit val system =
-      Coding.System[DrugUsage.Value](VSet[DrugUsage.Value].name)
+      Coding.System[DrugUsage.Value](ValSet[DrugUsage.Value].name)
   }
 
 
@@ -127,7 +127,6 @@ object Query
     medicationsWithUsage: Option[Set[MedicationWithUsage]],
     responses: Option[Set[Coding[RECIST.Value]]]
   )
-
 
   object Parameters
   {
@@ -176,3 +175,17 @@ object PeerToPeerQuery
   implicit val format = Json.format[PeerToPeerQuery]
 }
 
+
+final case class PeerToPeerMTBFileRequest
+(
+  origin: ZPM,
+  querier: Querier,
+  patId: Patient.Id,
+  snpId: Option[Snapshot.Id],
+  submittedAt: Instant = Instant.now
+)
+
+object PeerToPeerMTBFileRequest
+{
+  implicit val format = Json.format[PeerToPeerMTBFileRequest]
+}

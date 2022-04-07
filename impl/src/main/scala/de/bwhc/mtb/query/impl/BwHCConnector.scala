@@ -1,7 +1,7 @@
 package de.bwhc.mtb.query.impl
 
 
-
+import scala.util.Either
 import scala.concurrent.{
   ExecutionContext,
   Future
@@ -46,15 +46,12 @@ trait BwHCConnector
   ): Future[IorNel[String,List[Snapshot[MTBFile]]]]
 
 
-/*
-  def getMTBFileSnapshot(
+  def execute(
     site: ZPM,
-    id: Patient.Id,
-    snapshot: Snapshot.Id
+    req: PeerToPeerMTBFileRequest
   )(
     implicit ec: ExecutionContext
   ): Future[Either[String,Option[Snapshot[MTBFile]]]]
-*/
 
 
 }

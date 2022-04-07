@@ -119,6 +119,8 @@ object ParameterValidation extends Validator[String,Parameters]
 
     import ValueSets._
 
+    // TODO: validate that at least 1 parameter is set (diagnosis, or variant or medication)
+
     (
       validateEach(params.diagnoses.getOrElse(Set.empty).toList),
 

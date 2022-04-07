@@ -107,6 +107,8 @@ with Logging
 {
 
   import Json.{prettyPrint,toJson}
+  import de.bwhc.util.mapping.syntax._
+  import Mappings._
 
 
   def formattedJson[T: Writes](t: T) = prettyPrint(toJson(t)) 
@@ -196,6 +198,66 @@ with Logging
 
   }
 
+
+  override def savedQueriesOf(
+    querier: Querier
+  )(
+    implicit ec: ExecutionContext
+  ): Future[Iterable[SavedQueryInfo]] = {
+
+    //TODO TODO
+    ???
+
+  }
+
+
+
+  override def retrieveMTBFileSnapshot(
+    patId: Patient.Id,
+    snpId: Option[Snapshot.Id],
+    origin: Option[ZPM]
+  )(
+    implicit
+    querier: Querier,
+    ec: ExecutionContext
+  ): Future[Either[String,Option[MTBFileView]]] = {
+
+    import de.bwhc.mtb.data.entry.views.mappings._
+
+    val siteLog =
+      origin.filterNot(_ == localSite)
+        .map(_.value)
+        .getOrElse("local")
+
+    log.info(
+      s"""Processing direct request for MTBFile:\nPatient ${patId.value}\nSnapshot: ${snpId.map(_.value).getOrElse("latest")}\nSite: $siteLog\nQuerier: ${querier.value}"""
+    )
+
+    for {
+      errorOrResult <-
+        origin match {
+    
+          case Some(site) if (site != localSite) =>
+            bwHC.execute(
+              site,
+              PeerToPeerMTBFileRequest(
+                localSite,
+                querier, 
+                patId,
+                snpId
+              )
+            )
+    
+          case _ =>
+            db.snapshot(patId,snpId)
+             .map(_.asRight[String])
+        }
+      
+      result = 
+        errorOrResult.map(_.map(_.data.mapTo[MTBFileView]))
+
+    } yield result
+  }
 
   //---------------------------------------------------------------------------
   // QCReporting operations
@@ -392,6 +454,24 @@ with Logging
         )
 
       }
+
+
+      case Save(id,name,description) => {
+        //TODO
+        ???
+      }
+
+      case Reload(id) => {
+        //TODO
+        ???
+      }
+
+      case Delete(id) => {
+        //TODO
+        ???
+      }
+
+
     }
 
   }
@@ -428,7 +508,9 @@ with Logging
           }
         }
       else
-        Future.successful(List.empty[Snapshot[MTBFile]].rightIor[String].toIorNel)
+        Future.successful(
+          List.empty[Snapshot[MTBFile]].rightIor[String].toIorNel
+        )
 
     val localResults =
       db.findMatching(ParameterProcessor(params))
@@ -499,9 +581,6 @@ with Logging
     }   
   }
 
-
-  import de.bwhc.util.mapping.syntax._
-  import Mappings._
 
   override def patientsFrom(
     query: Query.Id
@@ -680,6 +759,17 @@ with Logging
 
   }
 
+  override def process(
+    req: PeerToPeerMTBFileRequest
+  )(
+    implicit ec: ExecutionContext
+  ): Future[Option[Snapshot[MTBFile]]] = {
+
+    log.info(s"Processing external MTBFile Snapshot request: \n${formattedJson(req)}") 
+
+    db.snapshot(req.patId,req.snpId)
+
+  }
 
   //---------------------------------------------------------------------------
   // bwHC Peer Status Operations

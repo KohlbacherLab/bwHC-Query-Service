@@ -4,6 +4,7 @@ package de.bwhc.mtb.query.test
 import scala.concurrent.{ExecutionContext,Future}
 
 import cats.data.{Ior,IorNel}
+import cats.syntax.either._
 
 import de.ekut.tbi.generators.Gen
 import de.bwhc.mtb.data.gens._
@@ -66,5 +67,16 @@ object FakeBwHCConnector extends BwHCConnector
 
   }
 
+  override def execute(
+    site: ZPM,
+    mfreq: PeerToPeerMTBFileRequest
+  )(
+    implicit ec: ExecutionContext
+  ): Future[Either[String,Option[Snapshot[MTBFile]]]] = {
+
+     Future.successful(
+       None.asRight[String]
+     )
+  }
 
 }
