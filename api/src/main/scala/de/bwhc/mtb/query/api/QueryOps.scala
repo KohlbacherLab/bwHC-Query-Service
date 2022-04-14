@@ -173,6 +173,13 @@ object QueryOps
     )
     extends Command
 
+    final case class Reset
+    (
+      id: Query.Id,
+    ) 
+    extends Command
+
+
     final case class Save
     (
       id: Query.Id,

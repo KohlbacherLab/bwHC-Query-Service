@@ -456,6 +456,11 @@ with Logging
       }
 
 
+      case Reset(id) => {
+        //TODO
+        ???
+      }
+
       case Save(id,name,description) => {
         //TODO
         ???
@@ -724,6 +729,7 @@ with Logging
                 mtbfile.molecularTherapies.getOrElse(List.empty).filterNot(_.history.isEmpty).map(_.history.head),
                 mtbfile.recommendations.getOrElse(List.empty),
                 mtbfile.diagnoses.getOrElse(List.empty),
+                mtbfile.ngsReports.getOrElse(List.empty),
                 mtbfile.responses.getOrElse(List.empty)
               )
               .mapTo[List[MolecularTherapyView]]

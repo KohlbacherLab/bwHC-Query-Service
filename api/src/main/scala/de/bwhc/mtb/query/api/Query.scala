@@ -149,7 +149,10 @@ object Query
   (
     genders: Set[Gender.Value],
     ageRange: ClosedInterval[Int],
-    vitalStatus: Set[VitalStatus.Value]
+    vitalStatus: Set[VitalStatus.Value],
+//    priorities: Set[Priority.Value],
+//    levelsOfEvidence: Set[LevelOfEvidence.Grading],
+//    responses: Set[RECIST.Value],
   )
 
   implicit val formatFilter =

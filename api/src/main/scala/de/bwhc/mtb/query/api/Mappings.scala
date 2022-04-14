@@ -48,7 +48,12 @@ trait Mappings
         ngs.patient,
         ngs.specimen,
         specimen.map(_.icd10.mapTo[ICD10Display]).toRight(NotAvailable),
-        specimen.flatMap(_.`type`).flatMap(ValueSet[Specimen.Type.Value].displayOf).toRight(NotAvailable),
+        specimen.flatMap(_.`type`)
+          .flatMap(ValueSet[Specimen.Type.Value].displayOf)
+          .toRight(NotAvailable),
+        specimen.flatMap(_.collection.map(_.localization))
+          .flatMap(ValueSet[Specimen.Collection.Localization.Value].displayOf)
+          .toRight(NotAvailable),
         ngs.sequencingType,
         ngs.tumorCellContent.map(_.mapTo[TumorCellContentDisplay]).toRight(NotAvailable)
       )
