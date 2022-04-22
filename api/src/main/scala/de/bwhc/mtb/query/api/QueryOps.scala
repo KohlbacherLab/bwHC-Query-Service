@@ -39,10 +39,18 @@ trait QueryOps
   def process(
     cmd: QueryOps.Command
   )(
-    implicit ec: ExecutionContext
+    implicit
+    querier: Querier,
+    ec: ExecutionContext
   ): Future[IorNel[String,Query]]
 
-  def !(cmd: QueryOps.Command)(implicit ec: ExecutionContext) = process(cmd)
+  final def !(
+    cmd: QueryOps.Command
+  )(
+    implicit
+    querier: Querier,
+    ec: ExecutionContext
+  ) = process(cmd)
 
 
   def get(
@@ -149,6 +157,7 @@ object QueryOps
   object Command
   {
 
+/*
     final case class Submit
     (
       querier: Querier,
@@ -165,6 +174,15 @@ object QueryOps
       filter: Option[Query.Filter]
     )
     extends Command
+*/
+  
+    final case class Submit
+    (
+      mode: Coding[Query.Mode.Value],
+      parameters: Query.Parameters,
+    )
+    extends Command
+
   
     final case class ApplyFilter
     (
@@ -204,14 +222,14 @@ object QueryOps
     implicit val formatSubmit =
       Json.format[Submit]
  
-    implicit val formatUpdate =
-      Json.format[Update]
+//    implicit val formatUpdate =
+//      Json.format[Update]
  
     implicit val formatApplyFilter =
       Json.format[ApplyFilter]
 
-    implicit val formatSave =
-      Json.format[Save]
+//    implicit val formatSave =
+//      Json.format[Save]
  
   }
 

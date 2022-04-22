@@ -31,6 +31,13 @@ import de.bwhc.mtb.data.entry.dtos.{
   Variant,
   Gene,
   ZPM,
+/*
+  ECOG,
+  Specimen,
+  LevelOfEvidence,
+  TherapyRecommendation,
+  MolecularTherapy
+*/
 }
 
 
@@ -111,7 +118,6 @@ object Query
   case class MedicationWithUsage
   (
     medication: Coding[Medication.Code],
-//    usage: Coding[DrugUsage.Value]
     usage: Set[Coding[DrugUsage.Value]]
   )
 
@@ -141,25 +147,66 @@ object Query
   }
 
 
-  implicit val formatParameters =
-    Json.format[Parameters]
+  implicit val formatParameters = Json.format[Parameters]
 
+
+/*
+  final case class PatientFilter 
+  (
+    gender: Set[Gender.Value],
+    age: ClosedInterval[Int],
+    vitalStatus: Set[VitalStatus.Value]
+  )
+
+  final case class NGSSummaryFilter 
+  (
+    specimenType: Set[Specimen.Type.Value],
+    specimenLocalization: Set[Specimen.Collection.Localization.Value],
+    tumorCellContent: ClosedInterval[Int]
+  )
+
+  final case class TherapyRecommendationFilter 
+  (
+    ecogStatus: Set[ECOG.Value],
+    priority: Set[TherapyRecommendation.Priority.Value],
+    levelOfEvidence: Set[LevelOfEvidence.Grading.Value],
+    medication: Set[Coding[Medication.Code]]
+  )
+
+  final case class MolecularTherapyFilter 
+  (
+    status: Set[MolecularTherapy.Status.Value],
+    medication: Set[Coding[Medication.Code]]
+    response: Set[RECIST.Value]   
+  )
+
+  final case class Filters
+  (
+    patient: PatientFilter,
+    ngsSummaries: NGSSummaryFilter,
+    therapyRecommendation: TherapyRecommendationFilter,
+    molecularTherapy: MolecularTherapyFilter
+  )
+
+  implicit val formatPatFilter   = Json.format[PatientFilter]
+  implicit val formatNGSFilter   = Json.format[NGSFilter]
+  implicit val formatThRecFilter = Json.format[TherapyRecommendationFilter]
+  implicit val formatMolThFilter = Json.format[MolecularTherapyFilter]
+  implicit val formatFilters     = Json.format[Filters]
+*/
 
   final case class Filter
   (
     genders: Set[Gender.Value],
     ageRange: ClosedInterval[Int],
-    vitalStatus: Set[VitalStatus.Value],
-//    priorities: Set[Priority.Value],
-//    levelsOfEvidence: Set[LevelOfEvidence.Grading],
-//    responses: Set[RECIST.Value],
+    vitalStatus: Set[VitalStatus.Value]
   )
 
-  implicit val formatFilter =
-    Json.format[Filter]
 
-  implicit val formatQuery =
-    Json.format[Query]
+
+  implicit val formatFilter = Json.format[Filter]
+
+  implicit val formatQuery = Json.format[Query]
 
 }
 

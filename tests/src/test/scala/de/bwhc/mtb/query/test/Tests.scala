@@ -39,7 +39,7 @@ object Setup
 
   val localSite = ZPM("Tübingen")
  
-  val querier   = Querier("Dummy")
+  implicit val querier   = Querier("Dummy")
 
   System.setProperty("bwhc.zpm.site",localSite.value)
   System.setProperty("bwhc.query.data.dir", tmpDir.getAbsolutePath)
@@ -155,7 +155,8 @@ class Tests extends AsyncFlatSpec
 
     for {
 
-      result <- service ! Submit(querier,mode,params)
+//      result <- service ! Submit(querier,mode,params)
+      result <- service ! Submit(mode,params)
 
       query = result.onlyRight.value
 
@@ -210,7 +211,8 @@ class Tests extends AsyncFlatSpec
 
     for {
 
-      result <- service ! Submit(querier,mode,params)
+//      result <- service ! Submit(querier,mode,params)
+      result <- service ! Submit(mode,params)
 
       query = result.onlyRight.value
 

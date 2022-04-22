@@ -68,10 +68,18 @@ class QueryServiceProviderImpl extends QueryServiceProvider
 object QueryServiceImpl
 {
 
-  private val localSite  = Option(System.getProperty("bwhc.zpm.site")).map(ZPM(_)).get  //TODO: improve configurability
-  private val db         = LocalDB.getInstance.get
-  private val bwHC       = BwHCConnector.getInstance.get
-  private val queryCache: QueryCache = DefaultQueryCache
+  private val localSite =
+    Option(System.getProperty("bwhc.zpm.site")).map(ZPM(_)).get  //TODO: improve configurability
+
+  private val db =
+    LocalDB.getInstance.get
+
+  private val bwHC =
+    BwHCConnector.getInstance.get
+
+//  private val queryCache: QueryCache = DefaultQueryCache
+  private val queryCache =
+    QueryCache.getInstance.getOrElse(new DefaultQueryCache)
 
   val instance =
     new QueryServiceImpl(
@@ -318,13 +326,16 @@ with Logging
   override def process(
     cmd: QueryOps.Command
   )(
-    implicit ec: ExecutionContext
+    implicit
+    querier: Querier,
+    ec: ExecutionContext
   ): Future[IorNel[String,Query]] = {
 
     import QueryOps.Command._
 
     cmd match {
 
+/*
       //-----------------------------------------------------------------------
       case Submit(querier,mode,params) => {
 
@@ -431,7 +442,89 @@ with Logging
           }
             
       }
+*/
 
+      //-----------------------------------------------------------------------
+      case Submit(mode,params) => {
+
+        log.info(s"Processing Query submission by Querier ${querier.value}")
+
+        // Validate Query Parameters (ICD-10s, ATC Codes, HGNC symbols)
+        ParameterValidation(params) match {
+
+          case Invalid(errors) =>
+            Future.successful(errors.leftIor[Query])
+
+          case Valid(validatedParams) => {
+
+            queryCache.queryOf(querier) match {
+
+              case None => {
+
+                val queryId = queryCache.newQueryId
+                
+                val processed =
+                  for {
+                    results <- IorT(submitQuery(queryId,querier,mode.code,params))
+                
+                    zpms = results.foldLeft(Set.empty[ZPM])((acc,snp) => acc + snp.data.patient.managingZPM.get)
+                
+                    query =
+                      Query(
+                        queryId,
+                        querier,
+                        Instant.now,
+                        mode.withDisplay,
+                        validatedParams,
+                        defaultFilterOn(results.map(_.data)),
+                        zpms,
+                        Instant.now
+                      )
+                
+                    _ = queryCache += (query -> results)
+                
+                    _ = log.info(s"New Query session opened: ${queryId.value}")
+                
+                  } yield query
+                
+                processed.value
+            
+              }
+
+              case Some(query) => {
+
+                val updatedQuery =
+                  query.copy(
+                    mode = mode.withDisplay,
+                    parameters = validatedParams,
+                    lastUpdate = Instant.now
+                  )
+
+                if (query.mode.code != updatedQuery.mode.code ||
+                    query.parameters != updatedQuery.parameters)
+
+                  submitQuery(query.id,querier,updatedQuery.mode.code,updatedQuery.parameters)
+                    .andThen {
+                      case Success(Ior.Right(results)) => queryCache.update(updatedQuery -> results)
+                    }
+                    .map(
+                      _.map {
+                        results =>
+                          updatedQuery.copy(zpms = results.foldLeft(Set.empty[ZPM])((acc,snp) => acc + snp.data.patient.managingZPM.get))
+                      }
+                    )
+                    
+                else
+                  Future.successful(updatedQuery).andThen {
+                    case Success(q) => queryCache.update(q)
+                  }
+                  .map(_.rightIor[String].toIorNel)
+
+              }
+            }
+          }
+        }
+      }
 
       //-----------------------------------------------------------------------
       case ApplyFilter(id,filter) => {

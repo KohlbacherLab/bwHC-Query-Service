@@ -64,6 +64,11 @@ trait QueryCache
   ): Option[Query]
 
 
+  def queryOf(
+    querier: Querier,
+  ): Option[Query]
+
+
   def resultsOf(
     id: Query.Id,
   ): Option[ResultSet]
@@ -82,7 +87,8 @@ trait QueryCache
 
 
 
-object DefaultQueryCache
+//object DefaultQueryCache
+class DefaultQueryCache
 extends QueryCache
 with Logging
 {
@@ -140,7 +146,8 @@ with Logging
 
       val timedOutQueryIds =
         queries.values
-          .filter(_.lastUpdate isBefore Instant.now.minusSeconds(600)) // 10 min timeout limit
+          .filter(_.lastUpdate isBefore Instant.now.minusSeconds(1800)) // 30 min timeout limit
+//          .filter(_.lastUpdate isBefore Instant.now.minusSeconds(600)) // 10 min timeout limit
           .map(_.id)
 
       if (!timedOutQueryIds.isEmpty){
@@ -218,6 +225,16 @@ with Logging
     id: Query.Id,
   ): Option[Query] = {
     queries.get(id)
+  }
+
+
+  def queryOf(
+    querier: Querier,
+  ): Option[Query] = {
+    queries.values
+      .find(
+        _.querier == querier
+      )
   }
 
 
