@@ -211,6 +211,7 @@ object Query
 }
 
 
+/*
 final case class PeerToPeerQuery
 (
   id: Query.Id,
@@ -239,3 +240,4 @@ object PeerToPeerMTBFileRequest
 {
   implicit val format = Json.format[PeerToPeerMTBFileRequest]
 }
+*/

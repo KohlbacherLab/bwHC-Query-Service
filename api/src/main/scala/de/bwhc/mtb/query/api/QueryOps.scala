@@ -129,6 +129,7 @@ trait QueryOps
   ): Future[Either[String,Option[MTBFileView]]]
 
 
+/*
   //---------------------------------------------------------------------------
   // Peer-to-peer Operations
   //---------------------------------------------------------------------------
@@ -145,7 +146,7 @@ trait QueryOps
   )(
     implicit ec: ExecutionContext
   ): Future[Option[Snapshot[MTBFile]]]
-
+*/
 
 }
 
