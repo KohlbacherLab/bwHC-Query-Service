@@ -63,11 +63,11 @@ trait QueryCache
     id: Query.Id,
   ): Option[Query]
 
-
+/*
   def queryOf(
     querier: Querier,
   ): Option[Query]
-
+*/
 
   def resultsOf(
     id: Query.Id,
@@ -227,7 +227,7 @@ with Logging
     queries.get(id)
   }
 
-
+/*
   def queryOf(
     querier: Querier,
   ): Option[Query] = {
@@ -236,7 +236,7 @@ with Logging
         _.querier == querier
       )
   }
-
+*/
 
   def resultsOf(
     id: Query.Id,

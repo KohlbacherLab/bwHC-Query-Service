@@ -210,34 +210,3 @@ object Query
 
 }
 
-
-/*
-final case class PeerToPeerQuery
-(
-  id: Query.Id,
-  origin: ZPM,
-  querier: Querier,
-  parameters: Query.Parameters,
-  submittedAt: Instant = Instant.now
-)
-
-object PeerToPeerQuery
-{
-  implicit val format = Json.format[PeerToPeerQuery]
-}
-
-
-final case class PeerToPeerMTBFileRequest
-(
-  origin: ZPM,
-  querier: Querier,
-  patId: Patient.Id,
-  snpId: Option[Snapshot.Id],
-  submittedAt: Instant = Instant.now
-)
-
-object PeerToPeerMTBFileRequest
-{
-  implicit val format = Json.format[PeerToPeerMTBFileRequest]
-}
-*/

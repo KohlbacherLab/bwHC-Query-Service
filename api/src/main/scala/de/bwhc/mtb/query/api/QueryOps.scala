@@ -129,25 +129,6 @@ trait QueryOps
   ): Future[Either[String,Option[MTBFileView]]]
 
 
-/*
-  //---------------------------------------------------------------------------
-  // Peer-to-peer Operations
-  //---------------------------------------------------------------------------
-
-  def resultsOf(
-    query: PeerToPeerQuery
-  )(
-    implicit ec: ExecutionContext
-  ): Future[Iterable[Snapshot[MTBFile]]]
-
-
-  def process(
-    req: PeerToPeerMTBFileRequest
-  )(
-    implicit ec: ExecutionContext
-  ): Future[Option[Snapshot[MTBFile]]]
-*/
-
 }
 
 
@@ -158,10 +139,8 @@ object QueryOps
   object Command
   {
 
-/*
     final case class Submit
     (
-      querier: Querier,
       mode: Coding[Query.Mode.Value],
       parameters: Query.Parameters
     )
@@ -175,15 +154,15 @@ object QueryOps
       filter: Option[Query.Filter]
     )
     extends Command
-*/
-  
+
+/*  
     final case class Submit
     (
       mode: Coding[Query.Mode.Value],
       parameters: Query.Parameters,
     )
     extends Command
-
+*/
   
     final case class ApplyFilter
     (
@@ -223,8 +202,8 @@ object QueryOps
     implicit val formatSubmit =
       Json.format[Submit]
  
-//    implicit val formatUpdate =
-//      Json.format[Update]
+    implicit val formatUpdate =
+      Json.format[Update]
  
     implicit val formatApplyFilter =
       Json.format[ApplyFilter]

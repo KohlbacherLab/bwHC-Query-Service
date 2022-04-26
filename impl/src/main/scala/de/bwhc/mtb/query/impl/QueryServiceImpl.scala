@@ -335,9 +335,8 @@ with Logging
 
     cmd match {
 
-/*
       //-----------------------------------------------------------------------
-      case Submit(querier,mode,params) => {
+      case Submit(mode,params) => {
 
         log.info(s"Processing Query submission by Querier ${querier.value}")
 
@@ -439,11 +438,13 @@ with Logging
                   this ! ApplyFilter(id,_)
                 )
             }
+
           }
             
       }
-*/
 
+
+/*
       //-----------------------------------------------------------------------
       case Submit(mode,params) => {
 
@@ -525,6 +526,7 @@ with Logging
           }
         }
       }
+*/
 
       //-----------------------------------------------------------------------
       case ApplyFilter(id,filter) => {
