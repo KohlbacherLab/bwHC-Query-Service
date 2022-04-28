@@ -350,7 +350,7 @@ with Logging
 
             val queryId = queryCache.newQueryId
             
-            val processed =
+            (
               for {
                 results <- IorT(submitQuery(queryId,querier,mode.code,params))
 
@@ -373,8 +373,8 @@ with Logging
                 _ = log.info(s"New Query session opened: ${queryId.value}")
 
               } yield query
-            
-            processed.value
+            )
+            .value
             
           }
             
@@ -409,16 +409,43 @@ with Logging
                 if (oldQuery.mode.code != updatedQuery.mode.code ||
                     oldQuery.parameters != updatedQuery.parameters)
 
+                  (
+                    for {
+                      results <- IorT(submitQuery(id,oldQuery.querier,updatedQuery.mode.code,updatedQuery.parameters))
+                  
+                      query =
+                        updatedQuery.copy(
+                          filter = defaultFilterOn(results.map(_.data)),
+                          zpms = results.foldLeft(Set.empty[ZPM])((acc,snp) => acc + snp.data.patient.managingZPM.get)
+                        )
+                  
+                      _ = queryCache.update(query -> results)
+                  
+                      _ = log.info(s"Query updated: ${query.id.value}")
+                  
+                    } yield query
+                  )
+                  .value
+
+/*            
                   submitQuery(id,oldQuery.querier,updatedQuery.mode.code,updatedQuery.parameters)
-                    .andThen {
-                      case Success(Ior.Right(results)) => queryCache.update(updatedQuery -> results)
-                    }
                     .map(
                       _.map {
                         results =>
-                          updatedQuery.copy(zpms = results.foldLeft(Set.empty[ZPM])((acc,snp) => acc + snp.data.patient.managingZPM.get))
+
+                          // Update query filter and list of ZPM sites 
+                          val query =
+                            updatedQuery.copy(
+                              filter = defaultFilterOn(results.map(_.data)),
+                              zpms = results.foldLeft(Set.empty[ZPM])((acc,snp) => acc + snp.data.patient.managingZPM.get)
+                            )
+
+                          queryCache.update(query -> results)
+                          
+                          query
                       }
                     )
+*/
                     
                 else
                   Future.successful(updatedQuery).andThen {
