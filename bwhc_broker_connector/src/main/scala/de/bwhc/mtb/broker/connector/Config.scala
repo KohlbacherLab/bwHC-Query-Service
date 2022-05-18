@@ -54,8 +54,6 @@ object Config
     val xml = XML.load(in)
 
     val site =
-//      Option((xml \ "ZPM" \@ "site")).filterNot(_.isEmpty)
-//        .orElse(Option(System.getProperty("bwhc.zpm.site")))
       Option(System.getProperty("bwhc.zpm.site"))
         .getOrElse((xml \ "ZPM" \@ "site"))
 

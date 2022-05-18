@@ -92,10 +92,8 @@ trait Mappings
         diags,
         pat.birthDate.map(
           bd => YEARS.between(bd,pat.dateOfDeath.getOrElse(LocalDate.now)).toInt
-        ).toRight(NotAvailable),
-//        ValueSet[VitalStatus.Value].displayOf(
-//          pat.dateOfDeath.map(_ => VitalStatus.Deceased).getOrElse(VitalStatus.Alive)
-//        ).get
+        )
+        .toRight(NotAvailable),
         pat.dateOfDeath
           .map(formatter.format)
           .flatMap(

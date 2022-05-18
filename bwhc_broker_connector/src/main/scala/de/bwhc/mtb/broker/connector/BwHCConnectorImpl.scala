@@ -87,8 +87,13 @@ with Logging
 
   private val timeout = 20 seconds
 
+  private val BWHC_ORIGIN       = "Bwhc-Origin" 
+  private val BWHC_RECIPIENT    = "Bwhc-Recipient" 
+
   private val BWHC_SITE_ORIGIN  = "bwhc-site-origin" 
   private val BWHC_QUERY_USERID = "bwhc-query-userid"
+
+  private val ALL = "*"
 
   private val OK = 200
 
@@ -131,7 +136,10 @@ with Logging
 
     wsclient.url(baseUrl.toString + "bwhc/peer2peer/api/LocalQCReport")
       .withRequestTimeout(timeout)
-      .addHttpHeaders(BWHC_SITE_ORIGIN -> site.value)
+      .addHttpHeaders(
+        BWHC_ORIGIN    -> site.value
+        BWHC_RECIPIENT -> ALL
+      )
       .post(
         Map(
           BWHC_SITE_ORIGIN  -> origin.value,
@@ -173,7 +181,10 @@ with Logging
 
     wsclient.url(baseUrl.toString + "bwhc/peer2peer/api/query")
       .withRequestTimeout(timeout)
-      .addHttpHeaders(BWHC_SITE_ORIGIN -> site.value)
+      .addHttpHeaders(
+        BWHC_ORIGIN    -> site.value,
+        BWHC_RECIPIENT -> ALL
+      )
       .post(jsQuery)
       .map {
         resp => 

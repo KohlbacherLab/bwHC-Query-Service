@@ -131,12 +131,15 @@ object ParameterValidation extends Validator[String,Parameters]
       validateEach(params.medicationsWithUsage.getOrElse(Set.empty).toList)
     )
     .mapN {
-      (diags,tumorMorphology,genes,mwus) =>
+      (diags,tumorMorphology,genes,medsWithUsage) =>
         Parameters(
           Some(diags.toSet),
           Some(tumorMorphology.toSet),
           Some(genes.toSet),
-          Some(mwus.toSet),
+         params.simpleVariants,
+         params.copyNumberVariants,
+         params.tumorMutationalBurden,
+          Some(medsWithUsage.toSet),
           params.responses.map(
             _.map(
               c => c.copy(display = ValueSet[RECIST.Value].displayOf(c.code))

@@ -18,7 +18,7 @@ import cats.data.{
 
 import play.api.libs.json.{Json,Format,Reads,Writes,JsObject}
 
-import de.bwhc.util.data.ClosedInterval
+import de.bwhc.util.data.{Interval,ClosedInterval}
 
 import de.bwhc.mtb.data.entry.dtos.{
   Coding,
@@ -29,6 +29,8 @@ import de.bwhc.mtb.data.entry.dtos.{
   Medication,
   RECIST,
   Variant,
+  SimpleVariant,
+  CNV,
   Gene,
   ZPM,
 /*
@@ -125,11 +127,30 @@ object Query
     Json.format[MedicationWithUsage]
 
 
+  final case class SNVParameters
+  (
+    gene: Coding[Gene.HgncId],
+    dnaChange: Option[SimpleVariant.DNAChange],
+    aminoAcidChange: Option[SimpleVariant.AminoAcidChange],
+  )
+
+  final case class CNVParameters
+  (
+    genes: Set[Coding[Gene.HgncId]],
+    `type`: Option[CNV.Type.Value],
+    copyNumber: Option[ClosedInterval[Int]]
+  )
+
+
   final case class Parameters
   (
     diagnoses: Option[Set[Coding[ICD10GM]]],
     tumorMorphology: Option[Set[Coding[ICDO3M]]],
     mutatedGenes: Option[Set[Coding[Gene.HgncId]]],
+    simpleVariants: Option[Set[SNVParameters]],
+    copyNumberVariants: Option[Set[CNVParameters]],
+//    mutations: Option[Set[VariantParams]]
+    tumorMutationalBurden: Option[Interval[Int]],
     medicationsWithUsage: Option[Set[MedicationWithUsage]],
     responses: Option[Set[Coding[RECIST.Value]]]
   )
@@ -142,12 +163,17 @@ object Query
         None,
         None,
         None,
+        None,
+        None,
+        None,
         None
       )
   }
 
 
-  implicit val formatParameters = Json.format[Parameters]
+  implicit val formatSNVParameters = Json.format[SNVParameters]
+  implicit val formatCNVParameters = Json.format[CNVParameters]
+  implicit val formatParameters    = Json.format[Parameters]
 
 
 /*
