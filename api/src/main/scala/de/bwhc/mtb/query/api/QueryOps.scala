@@ -155,15 +155,6 @@ object QueryOps
     )
     extends Command
 
-/*  
-    final case class Submit
-    (
-      mode: Coding[Query.Mode.Value],
-      parameters: Query.Parameters,
-    )
-    extends Command
-*/
-  
     final case class ApplyFilter
     (
       id: Query.Id,

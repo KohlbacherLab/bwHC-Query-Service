@@ -130,6 +130,25 @@ object FSBackedLocalDB
 
   import scala.language.implicitConversions
 
+
+  implicit def snvParametersToPredicate(params: SNVParameters): SimpleVariant => Boolean = {
+    snv =>
+
+      snv.gene.flatMap(_.hgncId).exists(_.value equalsIgnoreCase params.gene.code.value) &&
+        params.dnaChange.map(pttrn => snv.dnaChange.exists(_.code.value contains pttrn.value)).getOrElse(true)  &&
+          params.aminoAcidChange.map(pttrn => snv.aminoAcidChange.exists(_.code.value contains pttrn.value)).getOrElse(true)  
+  }
+
+  implicit def cnvParametersToPredicate(params: CNVParameters): CNV => Boolean = {
+    cnv =>
+
+      val affectedGeneIds = 
+        cnv.reportedAffectedGenes.getOrElse(List.empty).flatMap(_.hgncId.toList).map(_.value)
+ 
+      params.genes.map(_.code.value).forall(affectedGeneIds.contains) &&
+        params.copyNumber.map(cnRng => cnv.totalCopyNumber.exists(cnRng.contains)).getOrElse(true)
+  }
+
   implicit def toPredicate(params: Parameters): Snapshot[MTBFile] => Boolean = {
 
     case Snapshot(_,_,mtbfile) =>
@@ -143,11 +162,8 @@ object FSBackedLocalDB
 
       val diagnosesSelection            = params.diagnoses.getOrElse(Set.empty).map(_.code)
       val morphologySelection           = params.tumorMorphology.getOrElse(Set.empty).map(_.code)
-      val mutatedGeneIdSelection        = params.mutatedGenes.getOrElse(Set.empty).map(_.code)
       val responsesSelection            = params.responses.getOrElse(Set.empty).map(_.code)
       val medicationsWithUsageSelection = params.medicationsWithUsage.getOrElse(Set.empty)
-
-//      val (usedDrugSel,recDrugSel) = medicationsWithUsageSelection.partition(_.usage.code == Used)
 
       val (
         anyUsageDrugSelection,
@@ -195,6 +211,9 @@ object FSBackedLocalDB
           .fold(Set.empty[Medication.Code])(_ ++ _)
 
 
+      val mutatedGeneIdSelection =
+        params.mutatedGenes.getOrElse(Set.empty).map(_.code)
+
       val mutatedGeneIds =
         for {
           ngs <- mtbfile.ngsReports.getOrElse(List.empty)
@@ -214,15 +233,51 @@ object FSBackedLocalDB
 
           //TODO: genes from RNA-/DNA-Fusion and RNA-Seq
 
-       } yield geneIds
+        } yield geneIds
 
 
+      val snvsMatch =
+        params.simpleVariants.filter(_.nonEmpty)
+          .fold(true){ snvParams => 
+
+            val snvs =
+              mtbfile.ngsReports
+                .getOrElse(List.empty)
+                .flatMap(_.simpleVariants.getOrElse(List.empty))
+
+            snvParams.forall(snvs.exists(_))
+          }
+        
+      val cnvsMatch =
+        params.copyNumberVariants.filter(_.nonEmpty)
+          .fold(true){ cnvParams => 
+
+            val cnvs =
+              mtbfile.ngsReports
+                .getOrElse(List.empty)
+                .flatMap(_.copyNumberVariants.getOrElse(List.empty))
+
+            cnvParams.forall(cnvs.exists(_))
+          }
+
+       
+      val tmbMatches =
+        params.tumorMutationalBurden
+          .fold(true)(
+            tmbRange =>
+          
+            mtbfile.ngsReports.getOrElse(List.empty)
+              .flatMap(_.tmb.toList)
+              .exists(tmb => tmbRange.contains(tmb.value))
+          )  
+
+        
+
+      snvsMatch && cnvsMatch && tmbMatches &&
       matchesQuery(mutatedGeneIds, mutatedGeneIdSelection) &&
       matchesQuery(mtbfile.diagnoses.getOrElse(List.empty).map(_.icd10.get.code), diagnosesSelection) &&
       matchesQuery(mtbfile.histologyReports.getOrElse(List.empty).flatMap(_.tumorMorphology).map(_.value.code), morphologySelection) &&
       matchesQuery(mtbfile.responses.getOrElse(List.empty).map(_.value.code), responsesSelection) &&
-//      matchesQuery(usedDrugCodes, usedDrugSel.map(_.medication.code)) &&
-//      matchesQuery(recommendedDrugCodes, recDrugSel.map(_.medication.code))
       matchesQuery(recommendedDrugCodes & usedDrugCodes, bothUsagesDrugSelection) &&
       matchesQuery(recommendedDrugCodes, recommendedDrugSelection) &&
       matchesQuery(usedDrugCodes, usedDrugSelection ) &&
