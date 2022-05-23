@@ -2,7 +2,7 @@ package de.bwhc.mtb.query.impl
 
 
 
-import cats.data.Validated.validNel
+import cats.data.Validated.{validNel,invalidNel}
 import cats.data.ValidatedNel
 import de.bwhc.util.data.Validation._
 import de.bwhc.util.data.Validation.dsl._
@@ -77,6 +77,7 @@ object ParameterValidation extends Validator[String,Parameters]
   }
 
 
+
   implicit val hgncIdValidator: Validator[String,Coding[Gene.HgncId]] = {
     coding =>
       hgnc.gene(HGNCId(coding.code.value)) mustBe defined otherwise (
@@ -115,6 +116,25 @@ object ParameterValidation extends Validator[String,Parameters]
   }
 
 
+  implicit val snvParametersValidator: Validator[String,SNVParameters] = {
+    params =>
+      validate(params.gene).map(coding => params.copy(gene = coding))
+  }
+
+
+  implicit val cnvParametersValidator: Validator[String,CNVParameters] = {
+    case params @ CNVParameters(genes,typ,copyNumber) =>
+
+    (
+      if (genes.nonEmpty) validateEach(genes.toList)
+      else invalidNel("CNV-Paramaters: Genes must be non-empty")
+    )
+    .map(
+      codings => params.copy(genes = codings.toSet)
+    )
+  }
+
+
   override def apply(params: Parameters): ValidatedNel[String,Parameters] = {
 
     import ValueSets._
@@ -128,17 +148,21 @@ object ParameterValidation extends Validator[String,Parameters]
 
       validateEach(params.mutatedGenes.getOrElse(Set.empty).toList),
 
+      validateEach(params.simpleVariants.getOrElse(Set.empty).toList),
+      
+      validateEach(params.copyNumberVariants.getOrElse(Set.empty).toList),
+
       validateEach(params.medicationsWithUsage.getOrElse(Set.empty).toList)
     )
     .mapN {
-      (diags,tumorMorphology,genes,medsWithUsage) =>
+      (diags,tumorMorphology,genes,snvs,cnvs,medsWithUsage) =>
         Parameters(
           Some(diags.toSet),
           Some(tumorMorphology.toSet),
           Some(genes.toSet),
-         params.simpleVariants,
-         params.copyNumberVariants,
-         params.tumorMutationalBurden,
+          Some(snvs.toSet),
+          Some(cnvs.toSet),
+          params.tumorMutationalBurden,
           Some(medsWithUsage.toSet),
           params.responses.map(
             _.map(
@@ -147,6 +171,7 @@ object ParameterValidation extends Validator[String,Parameters]
           )
         )
     }
+
   } 
 
 }

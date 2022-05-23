@@ -132,11 +132,19 @@ object FSBackedLocalDB
 
 
   implicit def snvParametersToPredicate(params: SNVParameters): SimpleVariant => Boolean = {
+  
     snv =>
 
-      snv.gene.flatMap(_.hgncId).exists(_.value equalsIgnoreCase params.gene.code.value) &&
-        params.dnaChange.map(pttrn => snv.dnaChange.exists(_.code.value contains pttrn.value)).getOrElse(true)  &&
-          params.aminoAcidChange.map(pttrn => snv.aminoAcidChange.exists(_.code.value contains pttrn.value)).getOrElse(true)  
+      import SimpleVariant.{DNAChange,AminoAcidChange}
+
+//      snv.gene.flatMap(_.hgncId).exists(_.value equalsIgnoreCase params.gene.code.value) &&
+      snv.gene.flatMap(_.hgncId).exists(_.value == params.gene.code.value) &&
+        params.dnaChange.map {
+          case DNAChange(pttrn) => snv.dnaChange.exists(_.code.value.toLowerCase contains pttrn.toLowerCase)
+        }.getOrElse(true)  &&
+        params.aminoAcidChange.map {
+          case AminoAcidChange(pttrn) => snv.aminoAcidChange.exists(_.code.value.toLowerCase contains pttrn.toLowerCase)
+        }.getOrElse(true)  
   }
 
   implicit def cnvParametersToPredicate(params: CNVParameters): CNV => Boolean = {
@@ -146,6 +154,7 @@ object FSBackedLocalDB
         cnv.reportedAffectedGenes.getOrElse(List.empty).flatMap(_.hgncId.toList).map(_.value)
  
       params.genes.map(_.code.value).forall(affectedGeneIds.contains) &&
+        params.`type`.map(_ == cnv.`type`).getOrElse(true) &&
         params.copyNumber.map(cnRng => cnv.totalCopyNumber.exists(cnRng.contains)).getOrElse(true)
   }
 
@@ -216,6 +225,7 @@ object FSBackedLocalDB
 
       val mutatedGeneIds =
         for {
+
           ngs <- mtbfile.ngsReports.getOrElse(List.empty)
 
           snvGeneIds =
@@ -270,7 +280,6 @@ object FSBackedLocalDB
               .flatMap(_.tmb.toList)
               .exists(tmb => tmbRange.contains(tmb.value))
           )  
-
         
 
       snvsMatch && cnvsMatch && tmbMatches &&
