@@ -139,7 +139,6 @@ object Query
     genes: Set[Coding[Gene.HgncId]],
     `type`: Option[CNV.Type.Value],
     copyNumber: Option[Interval[Int]]
-//    copyNumber: Option[ClosedInterval[Int]]
   )
 
 
@@ -151,7 +150,6 @@ object Query
     simpleVariants: Option[Set[SNVParameters]],
     copyNumberVariants: Option[Set[CNVParameters]],
     tumorMutationalBurden: Option[Interval[Double]],
-//    tumorMutationalBurden: Option[Interval[Int]],
     medicationsWithUsage: Option[Set[MedicationWithUsage]],
     responses: Option[Set[Coding[RECIST.Value]]]
   )
