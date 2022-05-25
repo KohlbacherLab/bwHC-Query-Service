@@ -22,8 +22,7 @@ import de.bwhc.mtb.data.entry.dtos.ZPM
 
 trait Config
 {  
-  def localSite: ZPM
-
+  def siteId: String
   def brokerBaseURL: URL
 }
 
@@ -35,7 +34,7 @@ object Config
 
   private case class Impl
   (
-    localSite: ZPM,
+    siteId: String,
     baseURL: String
   )
   extends Config
@@ -53,14 +52,13 @@ object Config
   private def parseXMLConfig(in: InputStream): Impl = {
     val xml = XML.load(in)
 
-    val site =
-      Option(System.getProperty("bwhc.zpm.site"))
-        .getOrElse((xml \ "ZPM" \@ "site"))
+    val siteId =
+      (xml \ "Site" \@ "id")
 
     val baseURL =
       (xml \ "Broker" \@ "baseURL")
 
-    Impl(ZPM(site),baseURL)
+    Impl(siteId,baseURL)
   }
 
 

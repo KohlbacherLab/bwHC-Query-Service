@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<bwHC>
-  <ZPM site="Tübingen"/>
+<ConnectorConfig>
+
+  <Site id="UKT"/>
+
   <Broker baseURL="http://localhost:9000"/>
 
-</bwHC>
+</ConnectorConfig>

@@ -106,14 +106,15 @@ with Logging
 
     log.debug(s"Requesting bwHC node connection status report")
 
-    val site    = config.localSite
+    val site    = config.siteId
+//    val site    = config.localSite
     val baseUrl = config.brokerBaseURL
 
     log.debug(s"Broker URL: ${baseUrl.toString}")
 
     wsclient.url(baseUrl.toString + "statusReport")
       .withRequestTimeout(timeout)
-      .addHttpHeaders(BWHC_SITE_ORIGIN -> site.value)
+      .addHttpHeaders(BWHC_SITE_ORIGIN -> site)
       .get
       .map(_.body[JsValue].as[PeerStatusReport])
 
@@ -129,7 +130,8 @@ with Logging
 
     log.debug(s"Requesting LocalQCReports for Querier ${querier.value}")
 
-    val site    = config.localSite
+    val site    = config.siteId
+//    val site    = config.localSite
     val baseUrl = config.brokerBaseURL
 
     log.debug(s"Broker URL: ${baseUrl.toString}")
@@ -137,7 +139,7 @@ with Logging
     wsclient.url(baseUrl.toString + "bwhc/peer2peer/api/LocalQCReport")
       .withRequestTimeout(timeout)
       .addHttpHeaders(
-        BWHC_ORIGIN    -> site.value
+        BWHC_ORIGIN    -> site,
         BWHC_RECIPIENT -> ALL
       )
       .post(
@@ -173,7 +175,8 @@ with Logging
 
     log.debug(s"Executing Peer-to-Peer Query ${Json.prettyPrint(jsQuery)}")
 
-    val site    = config.localSite
+    val site    = config.siteId
+//    val site    = config.localSite
     val baseUrl = config.brokerBaseURL
 
     log.debug(s"Broker URL: ${baseUrl.toString}")
@@ -182,7 +185,7 @@ with Logging
     wsclient.url(baseUrl.toString + "bwhc/peer2peer/api/query")
       .withRequestTimeout(timeout)
       .addHttpHeaders(
-        BWHC_ORIGIN    -> site.value,
+        BWHC_ORIGIN    -> site,
         BWHC_RECIPIENT -> ALL
       )
       .post(jsQuery)
