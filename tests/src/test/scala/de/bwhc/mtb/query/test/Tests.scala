@@ -155,7 +155,6 @@ class Tests extends AsyncFlatSpec
 
     for {
 
-//      result <- service ! Submit(querier,mode,params)
       result <- service ! Submit(mode,params)
 
       query = result.onlyRight.value
@@ -170,8 +169,10 @@ class Tests extends AsyncFlatSpec
                         ApplyFilter(
                           query.id,
                           query.filter.copy(
-                            vitalStatus = Set(filterVitalStatus),
-                            genders = Set(filterGender)
+                            genders = query.filter.genders.selectOnly(Coding.of(filterGender)),
+                            vitalStatus = query.filter.vitalStatus.selectOnly(Coding.of(filterVitalStatus))
+//                            genders = Set(filterGender),
+//                            vitalStatus = Set(filterVitalStatus)
                           )
                         )
 

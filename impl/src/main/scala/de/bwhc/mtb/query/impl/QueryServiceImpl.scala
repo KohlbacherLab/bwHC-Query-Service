@@ -674,8 +674,8 @@ with Logging
     val ageRange = ClosedInterval(ages.minOption.getOrElse(0) -> ages.maxOption.getOrElse(0))
 
     val vitalStatus = patients.map(_.vitalStatus).toSet
-
-    Query.Filter(genders, ageRange, vitalStatus)
+   
+    Query.Filter(genders,ageRange,vitalStatus)
 
   }
 

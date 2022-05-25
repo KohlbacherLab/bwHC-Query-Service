@@ -13,7 +13,7 @@ import de.bwhc.mtb.data.entry.views.{
 }
 
 
-final case class QueryMatchSynopsis
+final case class QueryMatchSummary
 (
   id: Patient.Id,
 //  rsv: Option[Double],   // Retrieval Status Value

@@ -70,7 +70,7 @@ lazy val bwhc_connector = project
     impl
   )
 
-/*
+
 lazy val bwhc_broker_connector = project
   .settings(
     name := "bwhc-broker-connector",
@@ -85,7 +85,7 @@ lazy val bwhc_broker_connector = project
   .dependsOn(
     impl
   )
-*/
+
 
 
 lazy val fs_mtbfile_db = project

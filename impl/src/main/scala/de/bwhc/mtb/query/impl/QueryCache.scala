@@ -15,7 +15,8 @@ import de.bwhc.mtb.query.api.{
   VitalStatus,
   Querier,
   Query,
-  Snapshot
+  Snapshot,
+  Selection
 }
 
 import de.bwhc.mtb.data.entry.dtos.MTBFile
@@ -126,9 +127,9 @@ with Logging
 
       val pat = mtbfile.patient
 
-      (f.genders contains pat.gender) &&
+      (f.genders.selectedValues.map(_.code) contains pat.gender) &&
       (pat.age.getOrElse(-1) isIn f.ageRange) &&
-      (f.vitalStatus contains pat.vitalStatus)
+      (f.vitalStatus.selectedValues.map(_.code) contains pat.vitalStatus)
           
   }
 

@@ -7,8 +7,10 @@ import java.time.LocalDate
 import play.api.libs.json.Json
 
 import de.bwhc.mtb.data.entry.dtos.{
+  Coding,
   Patient,
   ZPM,
+  ValueSet => ValSet
 }
 import de.bwhc.mtb.data.entry.views.{
   Or,
@@ -21,6 +23,16 @@ object VitalStatus extends Enumeration
   val Alive, Deceased = Value
 
   implicit val format = Json.formatEnum(this)
+  implicit val system = Coding.System[VitalStatus.Value]("Vital-Status")
+
+
+  implicit val vitalStatusDE =
+    ValSet[VitalStatus.Value](
+      "Vital-Status",
+      VitalStatus.Alive    -> "Lebend",
+      VitalStatus.Deceased -> "Verstorben"
+    )
+
 }
 
 case class DiagnosisSummary(value: String) extends AnyVal

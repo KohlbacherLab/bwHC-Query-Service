@@ -32,14 +32,6 @@ trait Mappings
   import java.time.temporal.ChronoUnit.YEARS
 
 
-  implicit val vitalStatusDE: ValueSet[VitalStatus.Value] =
-    ValueSet(
-      "Vital-Status",
-      VitalStatus.Alive    -> "Lebend",
-      VitalStatus.Deceased -> "Verstorben"
-    )
-
-
   implicit val specimenAndReportToSummary: ((SomaticNGSReport,Option[Specimen])) => NGSSummary = {
 
     case (ngs,specimen) =>

@@ -141,6 +141,13 @@ object Query
     copyNumber: Option[Interval[Int]]
   )
 
+/*
+  final case class DNAFusionParameters
+  (
+    fusionPartner5prime: Option[Coding[Gene.HgncId]],
+    fusionPartner3prime: Option[Coding[Gene.HgncId]],
+  )
+*/
 
   final case class Parameters
   (
@@ -222,12 +229,29 @@ object Query
 
   final case class Filter
   (
-    genders: Set[Gender.Value],
+//    genders: Selection[Gender.Value],
+    genders: Selection[Coding[Gender.Value]],
     ageRange: ClosedInterval[Int],
-    vitalStatus: Set[VitalStatus.Value]
+    vitalStatus: Selection[Coding[VitalStatus.Value]]
+//    vitalStatus: Set[VitalStatus.Value]i
   )
 
+  object Filter
+  {
+    import de.bwhc.mtb.data.entry.dtos.ValueSets._
 
+    def apply(
+      genders: Set[Gender.Value],
+      ageRange: ClosedInterval[Int],
+      vitalStatus: Set[VitalStatus.Value]
+    ): Filter =
+      Filter(
+        Selection("Geschlecht",genders.map(Coding.of(_)).map(Selection.Item(_,true))),
+        ageRange, 
+        Selection("Vital-Status",vitalStatus.map(Coding.of(_)).map(Selection.Item(_,true)))
+      )
+
+  }
 
   implicit val formatFilter = Json.format[Filter]
 
