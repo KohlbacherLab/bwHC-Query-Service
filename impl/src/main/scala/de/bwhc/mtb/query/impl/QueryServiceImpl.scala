@@ -33,6 +33,8 @@ import de.bwhc.mtb.query.api._
 import de.bwhc.mtb.data.entry.dtos.{
   MTBFile,
   Patient,
+  Coding,
+  Gender,
   ICD10GM,
   Medication,
   MolecularTherapyDocumentation,
@@ -679,6 +681,93 @@ with Logging
 
   }
 
+/*
+  private def defaultPatientFilterOn(
+    mtbfiles: Iterable[MTBFile]
+  ): Query.PatientFilter = {
+
+    import extensions._
+    import de.bwhc.mtb.data.entry.dtos.ValueSets._
+
+
+    val patients =
+      mtbfiles.map(_.patient)
+
+    val genders =
+      patients.map(_.gender).toSet
+
+    val ages =
+      patients.map(_.age).filter(_.isDefined).map(_.get)
+    val ageRange =
+      ClosedInterval(
+        ages.minOption.getOrElse(0) -> ages.maxOption.getOrElse(0)
+      )
+
+    val vitalStatus = patients.map(_.vitalStatus).toSet
+   
+    Query.PatientFilter(
+      Selection(
+        "Geschlecht",
+        Gender.values.toSeq
+          .map(g => Selection.Item(Coding(g), genders contains g))
+      ),
+      ageRange,
+      Selection(
+        "Vital-Status",
+        VitalStatus.values.toSeq
+          .map(st => Selection.Item(Coding(st), vitalStatus contains st))
+      )
+    )
+
+  }
+
+  private def defaultNGSSummaryFilterOn(
+    mtbfiles: Iterable[MTBFile]
+  ): Query.NGSSummaryFilter = {
+
+    import scala.math.Ordering.Double.IeeeOrdering
+    import extensions._
+    import de.bwhc.mtb.data.entry.dtos.ValueSets._
+
+    val specimens =
+      mtbfiles.toList.flatMap(_.specimens.getOrElse(List.empty))
+
+    val ngsReports =
+      mtbfiles.toList.flatMap(_.ngsReports.getOrElse(List.empty))
+
+    val (specimenTypes,specimenLocalizations) =
+      specimens.foldLeft(
+        (Set.empty[Specimen.Type.Value], Set.empty[Specimen.Collection.Localization.Value])
+      ){
+        case ((types,localizations),sp) => 
+          (types ++ sp.`type`, localizations ++ sp.collection.map(_.localization))
+      }
+
+//    val tcRange =
+//      ngsReports.flatMap(_.tumorCellContent.map(tc => (tc.value * 100).toInt).toList)
+
+    val tmbRange =
+      ngsReports.flatMap(_.tmb.map(_.value).toList)
+
+
+    Query.NGSSummaryFilter(
+      Selection(
+        "Proben-Art",
+        Specimen.Type.values.toSeq
+          .map(t => Selection.Item(Coding(t), specimenTypes contains t))
+      ),
+      Selection(
+        "Proben-Lokalisierung",
+        Specimen.Collection.Localization.values.toSeq
+          .map(t => Selection.Item(Coding(t), specimenLocalizations contains t))
+      ),
+      ClosedInterval(
+        tmbRange.minOption.getOrElse(0.0) -> tmbRange.maxOption.getOrElse(0.0)
+      )
+    )
+
+  }
+*/
 
   override def get(
     query: Query.Id

@@ -8,7 +8,7 @@ import play.api.libs.json.{Json,Format}
 final case class Selection[T]
 (
   name: String,
-  items: Set[Selection.Item[T]]
+  items: Seq[Selection.Item[T]]
 ){
 
   def unselect(ts: T*): Selection[T] = {
@@ -27,13 +27,19 @@ final case class Selection[T]
     )
   }
 
-  def selectedValues: Set[T] =
+  def selectedValues: Seq[T] =
     items.filter(_.selected).map(_.value)
-//    items.collect { case Selection.Item(t,true) => t }
 
   def isSelected(t: T): Boolean =
     items.exists(item => item.value == t && item.selected)
 
+/*
+  def map[U](f: T => U): Selection[U] =
+    Selection(
+      name,
+      items.map(item => Selection.Item(f(item.value),item.selected))
+    )
+*/
 }
 
 object Selection
@@ -44,6 +50,20 @@ object Selection
     value: T,
     selected: Boolean
   )
+
+/*
+  def withPossibleValues[T](
+    name: String,
+    possibleValues: Seq[T],
+    occurringValues: Set[T]
+  ): Selection[T] =
+    Selection(
+      name,
+      possibleValues.map(
+        v => Item(v, occurringValues contains v)
+      )
+    )
+*/
 
   implicit def formatItem[T: Format] = Json.format[Item[T]]
   implicit def format[T: Format] = Json.format[Selection[T]]

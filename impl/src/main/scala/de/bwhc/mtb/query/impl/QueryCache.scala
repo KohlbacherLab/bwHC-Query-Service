@@ -127,9 +127,11 @@ with Logging
 
       val pat = mtbfile.patient
 
-      (f.genders.selectedValues.map(_.code) contains pat.gender) &&
+//      (f.genders.selectedValues.map(_.code) contains pat.gender) &&
+      (f.genders contains pat.gender) &&
       (pat.age.getOrElse(-1) isIn f.ageRange) &&
-      (f.vitalStatus.selectedValues.map(_.code) contains pat.vitalStatus)
+//      (f.vitalStatus.selectedValues.map(_.code) contains pat.vitalStatus)
+      (f.vitalStatus contains pat.vitalStatus)
           
   }
 

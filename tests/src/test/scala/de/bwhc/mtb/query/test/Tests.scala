@@ -169,10 +169,10 @@ class Tests extends AsyncFlatSpec
                         ApplyFilter(
                           query.id,
                           query.filter.copy(
-                            genders = query.filter.genders.selectOnly(Coding.of(filterGender)),
-                            vitalStatus = query.filter.vitalStatus.selectOnly(Coding.of(filterVitalStatus))
-//                            genders = Set(filterGender),
-//                            vitalStatus = Set(filterVitalStatus)
+//                            genders = query.filter.genders.selectOnly(Coding(filterGender)),
+//                            vitalStatus = query.filter.vitalStatus.selectOnly(Coding(filterVitalStatus))
+                            genders = Set(filterGender),
+                            vitalStatus = Set(filterVitalStatus)
                           )
                         )
 

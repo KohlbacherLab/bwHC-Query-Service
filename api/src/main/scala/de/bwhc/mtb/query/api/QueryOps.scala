@@ -155,12 +155,25 @@ object QueryOps
     )
     extends Command
 
+
     final case class ApplyFilter
     (
       id: Query.Id,
       filter: Query.Filter
     )
     extends Command
+
+/*
+    final case class ApplyFilters
+    (
+      id: Query.Id,
+      patientFilter: Option[PatientFilter],
+      ngsSummaryFilter: Option[NGSSummaryFilter],
+      therapyRecommendationFilter: Option[TherapyRecommendationFilter],
+      molecularTherapyFilter: Option[MolecularTherapyFilter]
+    )
+    extends Command
+*/
 
     final case class Reset
     (

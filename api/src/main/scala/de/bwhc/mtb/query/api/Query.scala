@@ -33,13 +33,11 @@ import de.bwhc.mtb.data.entry.dtos.{
   CNV,
   Gene,
   ZPM,
-/*
   ECOG,
   Specimen,
   LevelOfEvidence,
   TherapyRecommendation,
   MolecularTherapy
-*/
 }
 
 
@@ -73,6 +71,7 @@ object Query
 
   import de.bwhc.mtb.data.entry.dtos.{ValueSet => ValSet}
   import ValSet.Concept
+
 
   object Mode extends Enumeration
   {
@@ -185,57 +184,58 @@ object Query
 /*
   final case class PatientFilter 
   (
-    gender: Set[Gender.Value],
+    gender: Selection[Coding[Gender.Value]],
     age: ClosedInterval[Int],
-    vitalStatus: Set[VitalStatus.Value]
+    vitalStatus: Selection[Coding[VitalStatus.Value]]
   )
 
   final case class NGSSummaryFilter 
   (
-    specimenType: Set[Specimen.Type.Value],
-    specimenLocalization: Set[Specimen.Collection.Localization.Value],
-    tumorCellContent: ClosedInterval[Int]
+    specimenType: Selection[Coding[Specimen.Type.Value]],
+    specimenLocalization: Selection[Coding[Specimen.Collection.Localization.Value]],
+//    tumorCellContent: ClosedInterval[Int],
+    tumorMutationalBurden: ClosedInterval[Double]
   )
 
   final case class TherapyRecommendationFilter 
   (
-    ecogStatus: Set[ECOG.Value],
-    priority: Set[TherapyRecommendation.Priority.Value],
-    levelOfEvidence: Set[LevelOfEvidence.Grading.Value],
-    medication: Set[Coding[Medication.Code]]
+    ecogStatus: Selection[Coding[ECOG.Value]],
+    priority: Selection[TherapyRecommendation.Priority.Value],
+    levelOfEvidence: Selection[LevelOfEvidence.Grading.Value],
+    medication: Selection[Coding[Medication.Code]]
   )
 
   final case class MolecularTherapyFilter 
   (
-    status: Set[MolecularTherapy.Status.Value],
-    medication: Set[Coding[Medication.Code]]
-    response: Set[RECIST.Value]   
+    status: Selection[Coding[MolecularTherapy.Status.Value]],
+    medication: Selection[Coding[Medication.Code]],
+    response: Selection[Coding[RECIST.Value]]
   )
 
   final case class Filters
   (
-    patient: PatientFilter,
-    ngsSummaries: NGSSummaryFilter,
-    therapyRecommendation: TherapyRecommendationFilter,
-    molecularTherapy: MolecularTherapyFilter
+    patientFilter: PatientFilter,
+    ngsSummaryFilter: NGSSummaryFilter,
+    therapyRecommendationFilter: TherapyRecommendationFilter,
+    molecularTherapyFilter: MolecularTherapyFilter
   )
 
   implicit val formatPatFilter   = Json.format[PatientFilter]
-  implicit val formatNGSFilter   = Json.format[NGSFilter]
+  implicit val formatNGSFilter   = Json.format[NGSSummaryFilter]
   implicit val formatThRecFilter = Json.format[TherapyRecommendationFilter]
   implicit val formatMolThFilter = Json.format[MolecularTherapyFilter]
   implicit val formatFilters     = Json.format[Filters]
 */
 
+
   final case class Filter
   (
-//    genders: Selection[Gender.Value],
-    genders: Selection[Coding[Gender.Value]],
+    genders: Set[Gender.Value],
     ageRange: ClosedInterval[Int],
-    vitalStatus: Selection[Coding[VitalStatus.Value]]
-//    vitalStatus: Set[VitalStatus.Value]i
+    vitalStatus: Set[VitalStatus.Value]
   )
 
+/*
   object Filter
   {
     import de.bwhc.mtb.data.entry.dtos.ValueSets._
@@ -246,13 +246,19 @@ object Query
       vitalStatus: Set[VitalStatus.Value]
     ): Filter =
       Filter(
-        Selection("Geschlecht",genders.map(Coding.of(_)).map(Selection.Item(_,true))),
+        Selection(
+          "Geschlecht",
+          Gender.values.toSeq
+            .map(g => Selection.Item(Coding(g), genders contains g))),
         ageRange, 
-        Selection("Vital-Status",vitalStatus.map(Coding.of(_)).map(Selection.Item(_,true)))
+        Selection(
+          "Geschlecht",
+          VitalStatus.values.toSeq
+            .map(st => Selection.Item(Coding(st), vitalStatus contains st))),
       )
 
   }
-
+*/
   implicit val formatFilter = Json.format[Filter]
 
   implicit val formatQuery = Json.format[Query]
