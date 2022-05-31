@@ -72,9 +72,10 @@ with Logging
 
     val total = mtbFiles.size
 
-    val mtbFilesWithNGS      = mtbFiles.filter(_.ngsReports.exists(!_.isEmpty))
-    val mtbFilesWithCarePlan = mtbFiles.filter(_.recommendations.exists(!_.isEmpty))
-    val mtbFilesWithFU       = mtbFiles.filter(_.molecularTherapies.exists(!_.isEmpty))
+    val mtbFilesWithNGS      = mtbFiles.filter(_.ngsReports.exists(_.nonEmpty))
+    val mtbFilesWithCarePlan = mtbFiles.filter(_.carePlans.exists(_.nonEmpty))
+//    val mtbFilesWithCarePlan = mtbFiles.filter(_.recommendations.exists(_.nonEmpty))
+    val mtbFilesWithFU       = mtbFiles.filter(_.molecularTherapies.exists(_.nonEmpty))
 
     val completionStats =
       Seq(

@@ -137,8 +137,23 @@ object FSBackedLocalDB
 
       import SimpleVariant.{DNAChange,AminoAcidChange}
 
-//      snv.gene.flatMap(_.hgncId).exists(_.value equalsIgnoreCase params.gene.code.value) &&
-      snv.gene.flatMap(_.hgncId).exists(_.value == params.gene.code.value) &&
+      snv.gene.flatMap(_.hgncId).exists(_.value equalsIgnoreCase params.gene.code.value) &&
+        params.dnaChange.fold(true)(
+          pttrn => snv.dnaChange.exists(_.code.value.toLowerCase contains pttrn.value.toLowerCase)
+        ) &&
+        params.aminoAcidChange.fold(true)(
+          pttrn => snv.aminoAcidChange.exists(_.code.value.toLowerCase contains pttrn.value.toLowerCase)
+        )
+  }
+
+/*
+  implicit def snvParametersToPredicate(params: SNVParameters): SimpleVariant => Boolean = {
+  
+    snv =>
+
+      import SimpleVariant.{DNAChange,AminoAcidChange}
+
+      snv.gene.flatMap(_.hgncId).exists(_.value equalsIgnoreCase params.gene.code.value) &&
         params.dnaChange.map {
           case DNAChange(pttrn) => snv.dnaChange.exists(_.code.value.toLowerCase contains pttrn.toLowerCase)
         }.getOrElse(true)  &&
@@ -146,6 +161,7 @@ object FSBackedLocalDB
           case AminoAcidChange(pttrn) => snv.aminoAcidChange.exists(_.code.value.toLowerCase contains pttrn.toLowerCase)
         }.getOrElse(true)  
   }
+*/
 
   implicit def cnvParametersToPredicate(params: CNVParameters): CNV => Boolean = {
     cnv =>
@@ -154,8 +170,8 @@ object FSBackedLocalDB
         cnv.reportedAffectedGenes.getOrElse(List.empty).flatMap(_.hgncId.toList).map(_.value)
  
       params.genes.map(_.code.value).forall(affectedGeneIds.contains) &&
-        params.`type`.map(_ == cnv.`type`).getOrElse(true) &&
-        params.copyNumber.map(cnRng => cnv.totalCopyNumber.exists(cnRng.contains)).getOrElse(true)
+        params.`type`.fold(true)(_ == cnv.`type`) &&
+          params.copyNumber.fold(true)(range => cnv.totalCopyNumber.exists(range.contains))
   }
 
   implicit def toPredicate(params: Parameters): Snapshot[MTBFile] => Boolean = {
@@ -282,7 +298,9 @@ object FSBackedLocalDB
           )  
         
 
-      snvsMatch && cnvsMatch && tmbMatches &&
+      snvsMatch &&
+      cnvsMatch &&
+      tmbMatches &&
       matchesQuery(mutatedGeneIds, mutatedGeneIdSelection) &&
       matchesQuery(mtbfile.diagnoses.getOrElse(List.empty).map(_.icd10.get.code), diagnosesSelection) &&
       matchesQuery(mtbfile.histologyReports.getOrElse(List.empty).flatMap(_.tumorMorphology).map(_.value.code), morphologySelection) &&

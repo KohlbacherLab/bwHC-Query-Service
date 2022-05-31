@@ -428,26 +428,6 @@ with Logging
                     } yield query
                   )
                   .value
-
-/*            
-                  submitQuery(id,oldQuery.querier,updatedQuery.mode.code,updatedQuery.parameters)
-                    .map(
-                      _.map {
-                        results =>
-
-                          // Update query filter and list of ZPM sites 
-                          val query =
-                            updatedQuery.copy(
-                              filter = defaultFilterOn(results.map(_.data)),
-                              zpms = results.foldLeft(Set.empty[ZPM])((acc,snp) => acc + snp.data.patient.managingZPM.get)
-                            )
-
-                          queryCache.update(query -> results)
-                          
-                          query
-                      }
-                    )
-*/
                     
                 else
                   Future.successful(updatedQuery).andThen {

@@ -93,6 +93,7 @@ lazy val fs_mtbfile_db = project
     name := "fs-mtbfile-db",
     settings,
     libraryDependencies ++= Seq(
+      dependencies.scalatest,
       dependencies.bwhc_dto_gens
     )
   )
