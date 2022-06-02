@@ -2,7 +2,7 @@ package de.bwhc.mtb.query.impl
 
 
 
-import java.time.Instant
+import java.time.{Instant,YearMonth}
 
 import scala.util.{Either,Success}
 import scala.concurrent.{
@@ -37,11 +37,17 @@ import de.bwhc.mtb.data.entry.dtos.{
   Gender,
   ICD10GM,
   Medication,
+  TherapyRecommendation,
+  LevelOfEvidence,
   MolecularTherapyDocumentation,
+  MolecularTherapy,
+  StartedMolecularTherapy,
   Specimen,
   SomaticNGSReport,
   Variant,
-  ZPM
+  RECIST,
+  ZPM,
+  ValueSets
 }
 import de.bwhc.mtb.data.entry.views.{
   MolecularTherapyView,
@@ -365,7 +371,8 @@ with Logging
                     Instant.now,
                     mode.withDisplay,
                     validatedParams,
-                    defaultFilterOn(results.map(_.data)),
+                    defaultFilter(results.map(_.data)),
+                    defaultFilters(results.map(_.data)),
                     zpms,
                     Instant.now
                   )
@@ -385,7 +392,8 @@ with Logging
 
 
       //-----------------------------------------------------------------------
-      case Update(id,mode,params,filter) => {
+//      case Update(id,mode,params,filter) => {
+      case Update(id,mode,params) => {
 
         log.info(s"Updating Query ${id.value}")
 
@@ -417,7 +425,8 @@ with Logging
                   
                       query =
                         updatedQuery.copy(
-                          filter = defaultFilterOn(results.map(_.data)),
+                          filter = defaultFilter(results.map(_.data)),
+                          filters = defaultFilters(results.map(_.data)),
                           zpms = results.foldLeft(Set.empty[ZPM])((acc,snp) => acc + snp.data.patient.managingZPM.get)
                         )
                   
@@ -439,6 +448,7 @@ with Logging
 
             }
             .getOrElse(Future.successful(s"Invalid Query ID ${id.value}".leftIor[Query].toIorNel))
+/*
             .flatMap {
               errsOrQuery =>
                 filter.fold(
@@ -446,98 +456,16 @@ with Logging
                 )(
                   this ! ApplyFilter(id,_)
                 )
-            }
-
-          }
-            
-      }
-
-
-/*
-      //-----------------------------------------------------------------------
-      case Submit(mode,params) => {
-
-        log.info(s"Processing Query submission by Querier ${querier.value}")
-
-        // Validate Query Parameters (ICD-10s, ATC Codes, HGNC symbols)
-        ParameterValidation(params) match {
-
-          case Invalid(errors) =>
-            Future.successful(errors.leftIor[Query])
-
-          case Valid(validatedParams) => {
-
-            queryCache.queryOf(querier) match {
-
-              case None => {
-
-                val queryId = queryCache.newQueryId
-                
-                val processed =
-                  for {
-                    results <- IorT(submitQuery(queryId,querier,mode.code,params))
-                
-                    zpms = results.foldLeft(Set.empty[ZPM])((acc,snp) => acc + snp.data.patient.managingZPM.get)
-                
-                    query =
-                      Query(
-                        queryId,
-                        querier,
-                        Instant.now,
-                        mode.withDisplay,
-                        validatedParams,
-                        defaultFilterOn(results.map(_.data)),
-                        zpms,
-                        Instant.now
-                      )
-                
-                    _ = queryCache += (query -> results)
-                
-                    _ = log.info(s"New Query session opened: ${queryId.value}")
-                
-                  } yield query
-                
-                processed.value
-            
-              }
-
-              case Some(query) => {
-
-                val updatedQuery =
-                  query.copy(
-                    mode = mode.withDisplay,
-                    parameters = validatedParams,
-                    lastUpdate = Instant.now
-                  )
-
-                if (query.mode.code != updatedQuery.mode.code ||
-                    query.parameters != updatedQuery.parameters)
-
-                  submitQuery(query.id,querier,updatedQuery.mode.code,updatedQuery.parameters)
-                    .andThen {
-                      case Success(Ior.Right(results)) => queryCache.update(updatedQuery -> results)
-                    }
-                    .map(
-                      _.map {
-                        results =>
-                          updatedQuery.copy(zpms = results.foldLeft(Set.empty[ZPM])((acc,snp) => acc + snp.data.patient.managingZPM.get))
-                      }
-                    )
-                    
-                else
-                  Future.successful(updatedQuery).andThen {
-                    case Success(q) => queryCache.update(q)
-                  }
-                  .map(_.rightIor[String].toIorNel)
-
-              }
-            }
-          }
-        }
-      }
+            }i
 */
 
+          }
+            
+      }
+
+
       //-----------------------------------------------------------------------
+
       case ApplyFilter(id,filter) => {
 
         log.info(s"Applying Filter to Query ${id.value}:\n ${prettyPrint(toJson(filter))}")
@@ -556,6 +484,13 @@ with Logging
             .getOrElse(s"Invalid Query ID ${id.value}".leftIor[Query])
             .toIorNel
         )
+
+      }
+
+      case ApplyFilters(id,patientFilter,_,_,_) => {
+
+        //TODO
+        ???
 
       }
 
@@ -642,7 +577,7 @@ with Logging
   }
 
 
-  private def defaultFilterOn(
+  private def defaultFilter(
     mtbfiles: Iterable[MTBFile]
   ): Query.Filter = {
 
@@ -661,8 +596,20 @@ with Logging
 
   }
 
-/*
-  private def defaultPatientFilterOn(
+  private def defaultFilters(
+    mtbfiles: Iterable[MTBFile]
+  ): Query.Filters = {
+
+    Query.Filters(
+      defaultPatientFilter(mtbfiles),
+      defaultNGSSummaryFilter(mtbfiles),
+      defaultTherapyRecommendationFilter(mtbfiles),
+      defaultMolecularTherapyFilter(mtbfiles)
+    )
+
+  }
+
+  private def defaultPatientFilter(
     mtbfiles: Iterable[MTBFile]
   ): Query.PatientFilter = {
 
@@ -677,7 +624,8 @@ with Logging
       patients.map(_.gender).toSet
 
     val ages =
-      patients.map(_.age).filter(_.isDefined).map(_.get)
+      patients.flatMap(_.age)
+
     val ageRange =
       ClosedInterval(
         ages.minOption.getOrElse(0) -> ages.maxOption.getOrElse(0)
@@ -701,7 +649,8 @@ with Logging
 
   }
 
-  private def defaultNGSSummaryFilterOn(
+
+  private def defaultNGSSummaryFilter(
     mtbfiles: Iterable[MTBFile]
   ): Query.NGSSummaryFilter = {
 
@@ -727,7 +676,7 @@ with Logging
 //      ngsReports.flatMap(_.tumorCellContent.map(tc => (tc.value * 100).toInt).toList)
 
     val tmbRange =
-      ngsReports.flatMap(_.tmb.map(_.value).toList)
+      ngsReports.flatMap(_.tmb.map(_.value.toInt).toList)
 
 
     Query.NGSSummaryFilter(
@@ -742,12 +691,136 @@ with Logging
           .map(t => Selection.Item(Coding(t), specimenLocalizations contains t))
       ),
       ClosedInterval(
-        tmbRange.minOption.getOrElse(0.0) -> tmbRange.maxOption.getOrElse(0.0)
+        tmbRange.minOption.getOrElse(0) -> tmbRange.maxOption.getOrElse(0)
       )
     )
 
   }
+
+
+  import de.bwhc.catalogs.med.MedicationCatalog
+
+  private val atc =
+    MedicationCatalog.getInstance.get
+
+
+  private def defaultTherapyRecommendationFilter(
+    mtbfiles: Iterable[MTBFile]
+  ): Query.TherapyRecommendationFilter = {
+
+    import ValueSets._
+
+    val recommendations =
+      mtbfiles.flatMap(_.recommendations.getOrElse(List.empty))
+        .toList
+
+    val medicationGroups =
+      recommendations.flatMap(_.medication.getOrElse(List.empty))
+        .distinctBy(_.code)
+        .flatMap(coding => atc.findWithCode(coding.code.value))
+        .groupBy(_.parent.flatMap(atc.find(_)))
+/*
+    val ecogs =
+      mtbfiles.flatMap(_.ecogsStatus.getOrElse(List.empty).maxByOption(_.))
+        .map(_.value.code)
+        .toSet
 */
+
+    val priorities =
+      recommendations.flatMap(_.priority)
+        .toSet
+
+    val evidenceLevels =
+      recommendations.flatMap(_.levelOfEvidence.map(_.grading.code))
+        .toSet
+       
+
+    Query.TherapyRecommendationFilter(
+      Selection(
+        "Priorität",
+        TherapyRecommendation.Priority.values.toSeq
+          .map(p => Selection.Item(p, priorities contains p))
+      ),
+      Selection(
+        "Evidenzgrad",
+        LevelOfEvidence.Grading.values.toSeq
+          .map(l => Selection.Item(l, evidenceLevels contains l))
+      ),
+      medicationGroups.toList
+        .map {
+          case (group,medications) =>
+            Selection(
+              group.get.name,
+              medications.map(
+                med => Selection.Item(Coding(Medication.Code(med.code.value),Some(med.name)),true)
+              )
+            ) 
+        },
+    )
+
+  }
+
+
+  private def defaultMolecularTherapyFilter(
+    mtbfiles: Iterable[MTBFile]
+  ): Query.MolecularTherapyFilter = {
+
+    import ValueSets._
+
+    val therapies =
+      mtbfiles.flatMap(_.molecularTherapies.getOrElse(List.empty))
+        .flatMap(_.history.maxByOption(_.recordedOn))
+
+    val statusSet =
+      therapies.map(_.status).toSet
+
+    val recordingDates =
+      therapies.map(th => YearMonth.from(th.recordedOn))
+
+    val medicationGroups =
+      therapies.flatMap {
+        case th: StartedMolecularTherapy => th.medication.getOrElse(List.empty)
+        case _                           => List.empty
+      }
+      .toList
+      .distinctBy(_.code)
+      .flatMap(coding => atc.findWithCode(coding.code.value))
+      .groupBy(_.parent.flatMap(atc.find(_)))
+
+    val responseSet =
+      mtbfiles.flatMap(_.responses.getOrElse(List.empty))
+        .map(_.value.code)
+        .toSet
+
+
+    Query.MolecularTherapyFilter(
+      Selection(
+        "Therapie-Status",
+        MolecularTherapy.Status.values.toSeq
+          .map(st => Selection.Item(Coding(st), statusSet contains st))
+      ),
+      ClosedInterval(
+        recordingDates.minOption.getOrElse(YearMonth.now) -> recordingDates.maxOption.getOrElse(YearMonth.now)
+      ),
+      medicationGroups.toList
+        .map {
+          case (group,medications) =>
+            Selection(
+              group.get.name,
+              medications.map(
+                med => Selection.Item(Coding(Medication.Code(med.code.value),Some(med.name)),true)
+              )
+            ) 
+        },
+      Selection(
+        "Response",
+        RECIST.values.toSeq
+          .map(r => Selection.Item(Coding(r), responseSet contains r))
+      )
+    )
+
+  }
+
 
   override def get(
     query: Query.Id

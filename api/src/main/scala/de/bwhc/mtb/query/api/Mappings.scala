@@ -63,7 +63,8 @@ trait Mappings
   }
 
 
-  val formatter = DateTimeFormatter.ofPattern("MM.yyyy")
+  val formatter =
+    DateTimeFormatter.ofPattern("MM.yyyy")
 
 
   implicit val patientAndDiagnosesToView: ((Patient,List[Diagnosis])) => PatientView = {

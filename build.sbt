@@ -45,6 +45,7 @@ lazy val impl = project
     name := "query-service-impl",
     settings,
     libraryDependencies ++= Seq(
+      dependencies.scalatest,
       dependencies.hgnc_catalog_api,
       dependencies.icd_catalogs_api,
       dependencies.med_catalog_api 

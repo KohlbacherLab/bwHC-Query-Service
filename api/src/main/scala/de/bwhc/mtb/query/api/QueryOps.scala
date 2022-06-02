@@ -151,7 +151,7 @@ object QueryOps
       id: Query.Id,
       mode: Coding[Query.Mode.Value],
       parameters: Query.Parameters,
-      filter: Option[Query.Filter]
+//      filter: Option[Query.Filter]
     )
     extends Command
 
@@ -163,17 +163,17 @@ object QueryOps
     )
     extends Command
 
-/*
+
     final case class ApplyFilters
     (
       id: Query.Id,
-      patientFilter: Option[PatientFilter],
-      ngsSummaryFilter: Option[NGSSummaryFilter],
-      therapyRecommendationFilter: Option[TherapyRecommendationFilter],
-      molecularTherapyFilter: Option[MolecularTherapyFilter]
+      patientFilter: Option[Query.PatientFilter],
+      ngsSummaryFilter: Option[Query.NGSSummaryFilter],
+      therapyRecommendationFilter: Option[Query.TherapyRecommendationFilter],
+      molecularTherapyFilter: Option[Query.MolecularTherapyFilter]
     )
     extends Command
-*/
+
 
     final case class Reset
     (
@@ -211,6 +211,10 @@ object QueryOps
  
     implicit val formatApplyFilter =
       Json.format[ApplyFilter]
+
+    implicit val formatApplyFilters =
+      Json.format[ApplyFilters]
+
 
 //    implicit val formatSave =
 //      Json.format[Save]

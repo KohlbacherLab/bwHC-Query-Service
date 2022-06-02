@@ -23,6 +23,82 @@ import de.bwhc.mtb.data.entry.dtos.{
 import de.bwhc.mtb.query.api.Query._
 
 
+/*
+// Regular expressions for Varnomen (Variant Nomenclature) validation
+// See: https://varnomen.hgvs.org/
+object Varnomen
+{
+
+  import scala.util.matching.Regex
+
+  object DNA
+  {
+
+    private val nucleotideSymbols =
+     Seq("A","C","G","T","B","D","H","K","M","N","R","S","V","W","Y")
+
+    private val prefix            = "(c\\.|g\\.|m\\.|n\\.)"
+    private val offset            = "([+-]\\d+)"
+    private val position          = s"(\\d+$offset?)"
+    private val positionRange     = s"(\\d+_\\d+$offset?)"
+    private val nucleotide        = s"[${nucleotideSymbols.mkString}]"
+
+    private val substitution      = s"($position|$positionRange)$nucleotide+>$nucleotide+"
+    private val deletion          = s"($position|$positionRange)del"
+    private val duplication       = s"($position|$positionRange)dup"
+    private val insertion         = s"${positionRange}ins$nucleotide+"
+    private val invertion         = s"${positionRange}inv".r
+    private val deletionInsertion = s"($position|$positionRange)delins$nucleotide+"
+    private val change =
+      Seq(
+        substitution,
+        deletion,
+        duplication,
+        insertion,
+        invertion,
+        deletionInsertion
+      )
+      .mkString("|")
+
+    private val oneAllele  = s"\\[($change);($change)\\]"
+    private val twoAlleles = s"\\[($change)\\];\\[($change)\\]"
+
+
+    val Substitution      = s"$prefix$substitution".r
+    val Deletion          = s"$prefix$deletion".r
+    val Duplication       = s"$prefix$duplication".r
+    val Insertion         = s"$prefix$insertion".r
+    val Invertion         = s"$prefix$invertion".r
+    val DeletionInsertion = s"$prefix$deletionInsertion".r
+    val Change            = s"$prefix($change)".r
+    val OneAllele         = s"$prefix$oneAllele".r
+    val TwoAlleles        = s"$prefix$twoAlleles".r
+    val Allele            = s"$prefix($oneAllele|$twoAlleles)".r
+
+
+  }
+
+
+  object Protein
+  {
+
+    private val aminoAcidCodes =
+      Set(
+        "Ala","Asx","Cys","Asp","Glu",
+        "Phe","Gly","His","Ile","Lys",
+        "Leu","Met","Asn","Pro","Gln",
+        "Arg","Ser","Thr","Sec","Val",
+        "Trp","Tyr","Xaa","Glx",
+        "*"
+      )
+
+    private val aaCode = s"(${aminoAcidCodes.mkString("|")})"
+
+  }
+
+}
+*/
+
 object ParameterValidation extends Validator[String,Parameters]
 {
 
@@ -95,7 +171,8 @@ object ParameterValidation extends Validator[String,Parameters]
 
     case mwu @ MedicationWithUsage(medication,usageSet) =>
 
-      atc.entries().find(_.code.value == medication.code.value) mustBe defined otherwise (
+//      atc.entries().find(_.code.value == medication.code.value) mustBe defined otherwise (
+      atc.findWithCode(medication.code.value) mustBe defined otherwise (
         s"Invalid ATC Medication code ${medication.code.value}"
       ) map (
        _.get
@@ -114,7 +191,6 @@ object ParameterValidation extends Validator[String,Parameters]
           )
       )
   }
-
 
   implicit val snvParametersValidator: Validator[String,SNVParameters] = {
     params =>

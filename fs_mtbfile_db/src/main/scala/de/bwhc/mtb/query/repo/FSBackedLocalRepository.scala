@@ -154,14 +154,15 @@ object FSBackedLocalDB
       import SimpleVariant.{DNAChange,AminoAcidChange}
 
       snv.gene.flatMap(_.hgncId).exists(_.value equalsIgnoreCase params.gene.code.value) &&
-        params.dnaChange.map {
+        params.dnaChange.fold(true){
           case DNAChange(pttrn) => snv.dnaChange.exists(_.code.value.toLowerCase contains pttrn.toLowerCase)
-        }.getOrElse(true)  &&
-        params.aminoAcidChange.map {
+        } &&
+        params.aminoAcidChange.fold(true){
           case AminoAcidChange(pttrn) => snv.aminoAcidChange.exists(_.code.value.toLowerCase contains pttrn.toLowerCase)
-        }.getOrElse(true)  
+        }
   }
 */
+
 
   implicit def cnvParametersToPredicate(params: CNVParameters): CNV => Boolean = {
     cnv =>
@@ -173,6 +174,7 @@ object FSBackedLocalDB
         params.`type`.fold(true)(_ == cnv.`type`) &&
           params.copyNumber.fold(true)(range => cnv.totalCopyNumber.exists(range.contains))
   }
+
 
   implicit def toPredicate(params: Parameters): Snapshot[MTBFile] => Boolean = {
 
@@ -294,7 +296,7 @@ object FSBackedLocalDB
           
             mtbfile.ngsReports.getOrElse(List.empty)
               .flatMap(_.tmb.toList)
-              .exists(tmb => tmbRange.contains(tmb.value))
+              .exists(tmb => tmbRange.contains(tmb.value.toInt))
           )  
         
 

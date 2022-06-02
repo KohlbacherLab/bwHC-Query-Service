@@ -1,7 +1,7 @@
 package de.bwhc.mtb.query.api
 
 
-import java.time.Instant
+import java.time.{Instant,YearMonth}
 
 import scala.util.Either
 
@@ -19,6 +19,7 @@ import cats.data.{
 import play.api.libs.json.{Json,Format,Reads,Writes,JsObject}
 
 import de.bwhc.util.data.{Interval,ClosedInterval}
+import de.bwhc.util.json.time._
 
 import de.bwhc.mtb.data.entry.dtos.{
   Coding,
@@ -57,6 +58,7 @@ final case class Query
   mode: Coding[Query.Mode.Value],
   parameters: Query.Parameters,
   filter: Query.Filter,
+  filters: Query.Filters,
   zpms: Set[ZPM],
   lastUpdate: Instant
 )
@@ -141,10 +143,10 @@ object Query
   )
 
 /*
-  final case class DNAFusionParameters
+  final case class FusionParameters
   (
-    fusionPartner5prime: Option[Coding[Gene.HgncId]],
-    fusionPartner3prime: Option[Coding[Gene.HgncId]],
+    fusionPartner5prGene: Option[Coding[Gene.HgncId]],
+    fusionPartner3prGene: Option[Coding[Gene.HgncId]],
   )
 */
 
@@ -155,7 +157,9 @@ object Query
     mutatedGenes: Option[Set[Coding[Gene.HgncId]]],
     simpleVariants: Option[Set[SNVParameters]],
     copyNumberVariants: Option[Set[CNVParameters]],
-    tumorMutationalBurden: Option[Interval[Double]],
+//    dnaFusionParameters: Option[Set[FusionParameters]],
+//    rnaFusionParameters: Option[Set[FusionParameters]]
+    tumorMutationalBurden: Option[Interval[Int]],
     medicationsWithUsage: Option[Set[MedicationWithUsage]],
     responses: Option[Set[Coding[RECIST.Value]]]
   )
@@ -181,7 +185,6 @@ object Query
   implicit val formatParameters    = Json.format[Parameters]
 
 
-/*
   final case class PatientFilter 
   (
     gender: Selection[Coding[Gender.Value]],
@@ -194,21 +197,22 @@ object Query
     specimenType: Selection[Coding[Specimen.Type.Value]],
     specimenLocalization: Selection[Coding[Specimen.Collection.Localization.Value]],
 //    tumorCellContent: ClosedInterval[Int],
-    tumorMutationalBurden: ClosedInterval[Double]
+    tumorMutationalBurden: ClosedInterval[Int]
   )
 
   final case class TherapyRecommendationFilter 
   (
-    ecogStatus: Selection[Coding[ECOG.Value]],
+//    ecogStatus: Selection[Coding[ECOG.Value]],
     priority: Selection[TherapyRecommendation.Priority.Value],
     levelOfEvidence: Selection[LevelOfEvidence.Grading.Value],
-    medication: Selection[Coding[Medication.Code]]
+    medication: List[Selection[Coding[Medication.Code]]]
   )
 
   final case class MolecularTherapyFilter 
   (
     status: Selection[Coding[MolecularTherapy.Status.Value]],
-    medication: Selection[Coding[Medication.Code]],
+    recordingDate: ClosedInterval[YearMonth],
+    medication: List[Selection[Coding[Medication.Code]]],
     response: Selection[Coding[RECIST.Value]]
   )
 
@@ -225,7 +229,7 @@ object Query
   implicit val formatThRecFilter = Json.format[TherapyRecommendationFilter]
   implicit val formatMolThFilter = Json.format[MolecularTherapyFilter]
   implicit val formatFilters     = Json.format[Filters]
-*/
+
 
 
   final case class Filter
@@ -235,30 +239,6 @@ object Query
     vitalStatus: Set[VitalStatus.Value]
   )
 
-/*
-  object Filter
-  {
-    import de.bwhc.mtb.data.entry.dtos.ValueSets._
-
-    def apply(
-      genders: Set[Gender.Value],
-      ageRange: ClosedInterval[Int],
-      vitalStatus: Set[VitalStatus.Value]
-    ): Filter =
-      Filter(
-        Selection(
-          "Geschlecht",
-          Gender.values.toSeq
-            .map(g => Selection.Item(Coding(g), genders contains g))),
-        ageRange, 
-        Selection(
-          "Geschlecht",
-          VitalStatus.values.toSeq
-            .map(st => Selection.Item(Coding(st), vitalStatus contains st))),
-      )
-
-  }
-*/
   implicit val formatFilter = Json.format[Filter]
 
   implicit val formatQuery = Json.format[Query]
