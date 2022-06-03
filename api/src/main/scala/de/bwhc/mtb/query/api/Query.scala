@@ -85,10 +85,8 @@ object Query
     implicit val valueSetDE =
       ValSet[Mode.Value](
         "Query-Mode",
-        List(
-          Concept(Local,    "Lokal"),
-          Concept(Federated,"Föderiert")
-        )
+        Local     -> "Lokal",
+        Federated -> "Föderiert"
       )
 
     implicit val system =
@@ -107,10 +105,8 @@ object Query
     implicit val valueSetDE =
       ValSet[DrugUsage.Value](
         "Drug-Usage",
-        List(
-          Concept(Used,       "Verabreicht"),
-          Concept(Recommended,"Empfohlen")
-        )
+         Used        -> "Verabreicht",
+         Recommended -> "Empfohlen"
       )
 
     implicit val system =
@@ -188,7 +184,7 @@ object Query
   final case class PatientFilter 
   (
     gender: Selection[Coding[Gender.Value]],
-    age: ClosedInterval[Int],
+    ageRange: ClosedInterval[Int],
     vitalStatus: Selection[Coding[VitalStatus.Value]]
   )
 
@@ -196,7 +192,6 @@ object Query
   (
     specimenType: Selection[Coding[Specimen.Type.Value]],
     specimenLocalization: Selection[Coding[Specimen.Collection.Localization.Value]],
-//    tumorCellContent: ClosedInterval[Int],
     tumorMutationalBurden: ClosedInterval[Int]
   )
 

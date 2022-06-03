@@ -64,11 +64,6 @@ trait QueryCache
     id: Query.Id,
   ): Option[Query]
 
-/*
-  def queryOf(
-    querier: Querier,
-  ): Option[Query]
-*/
 
   def resultsOf(
     id: Query.Id,
@@ -88,7 +83,6 @@ trait QueryCache
 
 
 
-//object DefaultQueryCache
 class DefaultQueryCache
 extends QueryCache
 with Logging
@@ -118,20 +112,19 @@ with Logging
 
   import scala.language.implicitConversions
 
-  implicit def toPredicate(f: Query.Filter): MTBFile => Boolean = {
+  implicit def toPredicate(
+    filter: Query.Filter
+  ): MTBFile => Boolean = {
 
     import extensions._
-    import de.bwhc.util.data.Interval._
 
     mtbfile =>
 
       val pat = mtbfile.patient
 
-//      (f.genders.selectedValues.map(_.code) contains pat.gender) &&
-      (f.genders contains pat.gender) &&
-      (pat.age.getOrElse(-1) isIn f.ageRange) &&
-//      (f.vitalStatus.selectedValues.map(_.code) contains pat.vitalStatus)
-      (f.vitalStatus contains pat.vitalStatus)
+      (filter.genders contains pat.gender) &&
+      pat.age.exists(filter.ageRange.contains) &&
+      (filter.vitalStatus contains pat.vitalStatus)
           
   }
 
@@ -150,14 +143,13 @@ with Logging
       val timedOutQueryIds =
         queries.values
           .filter(_.lastUpdate isBefore Instant.now.minusSeconds(1800)) // 30 min timeout limit
-//          .filter(_.lastUpdate isBefore Instant.now.minusSeconds(600)) // 10 min timeout limit
           .map(_.id)
 
-      if (!timedOutQueryIds.isEmpty){
+      if (timedOutQueryIds.nonEmpty){
          log.info("Timed out query sessions detected, removing them...")
       }
 
-      queries subtractAll timedOutQueryIds
+      queries --= timedOutQueryIds
     
       log.debug("Finished running clean-up task for timed out query sessions")
 
@@ -230,16 +222,6 @@ with Logging
     queries.get(id)
   }
 
-/*
-  def queryOf(
-    querier: Querier,
-  ): Option[Query] = {
-    queries.values
-      .find(
-        _.querier == querier
-      )
-  }
-*/
 
   def resultsOf(
     id: Query.Id,
