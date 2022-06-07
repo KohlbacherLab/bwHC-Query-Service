@@ -101,14 +101,16 @@ trait QueryOps
     query: Query.Id,
   )(
     implicit ec: ExecutionContext
-  ): Future[Option[Iterable[TherapyRecommendationView]]]
+  ): Future[Option[Iterable[TherapyRecommendationSummary]]]
+//  ): Future[Option[Iterable[TherapyRecommendationView]]]
 
 
   def molecularTherapiesFrom(
     query: Query.Id,
   )(
     implicit ec: ExecutionContext
-  ): Future[Option[Iterable[MolecularTherapyView]]]
+  ): Future[Option[Iterable[MolecularTherapySummary]]]
+//  ): Future[Option[Iterable[MolecularTherapyView]]]
 
 
   def savedQueriesOf(

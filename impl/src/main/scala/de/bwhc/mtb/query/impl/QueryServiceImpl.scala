@@ -462,7 +462,6 @@ with FilteringOps
 
 
       //-----------------------------------------------------------------------
-
       case ApplyFilter(id,filter) => {
 
         log.info(s"Applying Filter to Query ${id.value}:\n ${prettyPrint(toJson(filter))}")
@@ -484,11 +483,41 @@ with FilteringOps
 
       }
 
-      case ApplyFilters(id,patientFilter,_,_,_) => {
+      //-----------------------------------------------------------------------
+      case ApplyFilters(
+        id,
+        optPatientFilter,
+        optNGSFilter,
+        optRecommendationFilter,
+        optTherapyFilter
+      ) => {
 
-        //TODO
-        ???
+        val updatedQuery =
+          for {
+            query <- queryCache.get(id)
+            updated =
+              query.copy(
+                filters =
+                  patch(
+                    query.filters
+                  )(
+                    optPatientFilter.map(f => filters => filters.copy(patientFilter = f)),
+                    optNGSFilter.map(f => filters => filters.copy(ngsSummaryFilter = f)),
+                    optRecommendationFilter.map(f => filters => filters.copy(therapyRecommendationFilter = f)),
+                    optTherapyFilter.map(f => filters => filters.copy(molecularTherapyFilter = f))
+                  ),
+                lastUpdate = Instant.now
+              )
+            _ =  queryCache.update(updated)
+            _ =  log.trace(s"Applied filter to Query ${id.value}")
+          } yield updated
 
+        Future.successful(
+          updatedQuery.map(_.rightIor[String])
+            .getOrElse(s"Invalid Query ID ${id.value}".leftIor[Query])
+            .toIorNel
+        )
+        
       }
 
 
@@ -517,6 +546,20 @@ with FilteringOps
 
   }
 
+
+  private def patch[T](
+    t: T
+  )(
+    patches: Option[T => T]*
+  ): T = {
+    
+    patches.foldLeft(
+      t
+    )(
+      (tpr,patch) =>
+        patch.fold(tpr)(p => p(tpr))
+    )
+  }
 
 
   private def submitQuery(
@@ -622,7 +665,7 @@ with FilteringOps
     }   
   }
 
-
+/*
   override def patientsFrom(
     query: Query.Id
   )(
@@ -642,44 +685,36 @@ with FilteringOps
       } yield patViews
     )
 
-
   }
 
-
-  override def mtbFileFrom(
+  override def ngsSummariesFrom(
     query: Query.Id,
-    patId: Patient.Id
   )(
     implicit ec: ExecutionContext
-  ): Future[Option[MTBFile]] = {
+  ): Future[Option[Iterable[NGSSummary]]] = {
 
-    Future.successful(
+    Future {
       for {
-        rs      <- queryCache resultsOf query 
-        mtbfile <- rs find (_.patient.id == patId)
-      } yield mtbfile 
-    )
+        resultSet <- queryCache.resultsOf(query)
+        ngsSummaries =
+          for {
+            mtbfile <- resultSet
 
-  }
+            specimens =
+               mtbfile.specimens.getOrElse(List.empty)
 
+            ngsReports =
+              mtbfile.ngsReports.getOrElse(List.empty)
 
-  override def mtbFileViewFrom(
-    query: Query.Id,
-    patId: Patient.Id
-  )(
-    implicit ec: ExecutionContext
-  ): Future[Option[MTBFileView]] = {
+            summaries <-
+              ngsReports.map(  //TODO: apply filter
+                ngs => (ngs -> specimens.find(_.id == ngs.specimen)).mapTo[NGSSummary]
+              )
 
-    import de.bwhc.mtb.data.entry.views.mappings._
+          } yield summaries 
 
-    Future.successful(
-      for {
-        rs      <- queryCache resultsOf query 
-        mtbfile <- rs find (_.patient.id == patId)
-      } yield mtbfile.mapTo[MTBFileView]
-    )
-
-  }
+      } yield ngsSummaries
+    }
 
 
   override def therapyRecommendationsFrom(
@@ -718,33 +753,6 @@ with FilteringOps
 
   }
 
-
-  override def ngsSummariesFrom(
-    query: Query.Id,
-  )(
-    implicit ec: ExecutionContext
-  ): Future[Option[Iterable[NGSSummary]]] = {
-
-    Future.successful(
-      for {
-        resultSet <- queryCache.resultsOf(query)
-        ngsSummaries =
-          for {
-            mtbfile   <- resultSet
-            summaries <-
-              (
-               mtbfile.ngsReports.getOrElse(List.empty),
-               mtbfile.specimens.getOrElse(List.empty)
-              )
-              .mapTo[List[NGSSummary]]
-          } yield summaries 
-
-      } yield ngsSummaries
-    )
-
-  }
-
-
   override def molecularTherapiesFrom(
     query: Query.Id,
   )(
@@ -775,6 +783,245 @@ with FilteringOps
       } yield allMolTh
     )
 
+  }
+
+*/
+
+  override def patientsFrom(
+    query: Query.Id
+  )(
+    implicit ec: ExecutionContext
+  ): Future[Option[Iterable[PatientView]]] = {
+
+    import PatientView._
+
+    Future {
+      for {
+        patientFilter  <-
+          queryCache.get(query)
+            .map(_.filters.patientFilter)
+
+        results <-
+          queryCache.resultsOf(query)
+
+        patViews =
+          results.filter(patientFilter)
+            .map(
+              mtbfile =>
+                (mtbfile.patient,mtbfile.diagnoses.getOrElse(List.empty)).mapTo[PatientView]
+            )
+      } yield patViews
+    }
+
+  }
+
+
+  override def ngsSummariesFrom(
+    query: Query.Id,
+  )(
+    implicit ec: ExecutionContext
+  ): Future[Option[Iterable[NGSSummary]]] = {
+
+    Future {
+      for {
+
+        filters <-
+          queryCache.get(query)
+            .map(_.filters)
+
+        resultSet <- queryCache.resultsOf(query)
+
+        ngsSummaries =         
+          for {
+            mtbfile <-
+              resultSet.filter(filters.patientFilter)
+
+            specimens =
+              mtbfile.specimens.getOrElse(List.empty)
+
+            ngsReports =
+              mtbfile.ngsReports.getOrElse(List.empty)
+
+            summaries <-
+              ngsReports
+                .map(ngs => (ngs -> specimens.find(_.id == ngs.specimen)))
+                .filter(filters.ngsSummaryFilter)
+                .map(_.mapTo[NGSSummary])
+
+          } yield summaries 
+
+      } yield ngsSummaries
+    }
+
+  }
+
+
+  override def therapyRecommendationsFrom(
+    query: Query.Id,
+  )(
+    implicit ec: ExecutionContext
+  ): Future[Option[Iterable[TherapyRecommendationSummary]]] = {
+
+    import de.bwhc.mtb.data.entry.views.mappings._
+
+    Future {
+      for {
+        filters <-
+          queryCache.get(query)
+            .map(_.filters)
+
+        resultSet <-
+          queryCache.resultsOf(query)
+
+        summaries =
+          for {
+            mtbfile <-
+              resultSet.filter(filters.patientFilter)
+
+            ecogs =
+              mtbfile.ecogStatus.getOrElse(List.empty)
+                .filter(_.effectiveDate.isDefined)
+
+            ngsReports =
+              mtbfile.ngsReports.getOrElse(List.empty)
+
+            recommendationSummaries <-
+              mtbfile.recommendations.getOrElse(List.empty)
+                .filter(filters.therapyRecommendationFilter)
+                .map { rec =>
+                  (
+                   rec,
+                   mtbfile.diagnoses.getOrElse(List.empty)
+                     .find(_.id == rec.diagnosis),
+                   rec.issuedOn
+                     .flatMap(date => ecogs.maxByOption(_.effectiveDate.get isBefore date)),                 
+                   rec.ngsReport
+                     .flatMap(
+                       ngsRef =>
+                         rec.supportingVariants.flatMap(
+                           variantRefs =>
+                             ngsReports.find(_.id == ngsRef)
+                               .map(
+                                 _.variants.filter(variant => variantRefs contains variant.id)
+                               )
+                       )
+                     )
+                     .getOrElse(List.empty)
+                  )
+                  .mapTo[TherapyRecommendationSummary]
+                }
+          } yield recommendationSummaries
+
+      } yield summaries
+    }
+
+  }
+
+
+  override def molecularTherapiesFrom(
+    query: Query.Id,
+  )(
+    implicit ec: ExecutionContext
+  ): Future[Option[Iterable[MolecularTherapySummary]]] = {
+  
+    import de.bwhc.mtb.data.entry.views.mappings._
+
+    Future {
+      for {
+        filters <-
+          queryCache.get(query)
+            .map(_.filters)
+
+        resultSet <-
+           queryCache.resultsOf(query) 
+
+        summaries =
+          for {
+            mtbfile <-
+              resultSet.filter(filters.patientFilter)
+
+            recommendations =
+              mtbfile.recommendations.getOrElse(List.empty)
+
+            ngsReports =
+              mtbfile.ngsReports.getOrElse(List.empty)
+
+            responses = 
+              mtbfile.responses.getOrElse(List.empty)
+ 
+            diagnoses = 
+              mtbfile.diagnoses.getOrElse(List.empty)
+
+            therapySummaries <-
+              mtbfile.molecularTherapies.getOrElse(List.empty)
+                .flatMap(_.history.maxByOption(_.recordedOn))
+                .map(
+                  th =>
+                    (th -> responses.filter(_.therapy == th.id).maxByOption(_.effectiveDate))
+                )
+                .filter(filters.molecularTherapyFilter)
+                .map {
+                  case (therapy,response) =>
+
+                    val recommendation =
+                      recommendations.find(_.id == therapy.basedOn)
+
+                  (
+                   therapy,
+                   recommendation.flatMap(rec => diagnoses.find(_.id == rec.diagnosis)),
+                   recommendation,
+                   recommendation.flatMap( rec =>
+                     rec.ngsReport.flatMap( ngsRef =>
+                       rec.supportingVariants.flatMap( variantRefs =>
+                         ngsReports.find(_.id == ngsRef)
+                           .map(
+                             _.variants.filter(variant => variantRefs contains variant.id)
+                           )
+                       )
+                     )
+                   )
+                   .getOrElse(List.empty),
+                   response
+                  ) 
+                  .mapTo[MolecularTherapySummary]
+                }
+ 
+          } yield therapySummaries
+
+      } yield summaries
+    }
+
+  }
+
+
+  override def mtbFileFrom(
+    query: Query.Id,
+    patId: Patient.Id
+  )(
+    implicit ec: ExecutionContext
+  ): Future[Option[MTBFile]] = {
+
+    Future {
+      for {
+        rs      <- queryCache resultsOf query 
+        mtbfile <- rs find (_.patient.id == patId)
+      } yield mtbfile 
+    }
+
+  }
+
+
+  override def mtbFileViewFrom(
+    query: Query.Id,
+    patId: Patient.Id
+  )(
+    implicit ec: ExecutionContext
+  ): Future[Option[MTBFileView]] = {
+
+    import de.bwhc.mtb.data.entry.views.mappings._
+
+    mtbFileFrom(query,patId)
+      .map(_.map(_.mapTo[MTBFileView]))
   }
 
 
