@@ -368,7 +368,7 @@ with FilteringOps
                     Instant.now,
                     mode.withDisplay,
                     validatedParams,
-                    defaultFilter(results.map(_.data)),
+//                    defaultFilter(results.map(_.data)),
                     DefaultFilters(results.map(_.data)),
                     zpms,
                     Instant.now
@@ -389,7 +389,6 @@ with FilteringOps
 
 
       //-----------------------------------------------------------------------
-//      case Update(id,mode,params,filter) => {
       case Update(id,mode,params) => {
 
         log.info(s"Updating Query ${id.value}")
@@ -422,7 +421,7 @@ with FilteringOps
                   
                       query =
                         updatedQuery.copy(
-                          filter = defaultFilter(results.map(_.data)),
+//                          filter = defaultFilter(results.map(_.data)),
                           filters = DefaultFilters(results.map(_.data)),
                           zpms = results.foldLeft(Set.empty[ZPM])((acc,snp) => acc + snp.data.patient.managingZPM.get)
                         )
@@ -445,22 +444,12 @@ with FilteringOps
 
             }
             .getOrElse(Future.successful(s"Invalid Query ID ${id.value}".leftIor[Query].toIorNel))
-/*
-            .flatMap {
-              errsOrQuery =>
-                filter.fold(
-                  Future.successful(errsOrQuery)
-                )(
-                  this ! ApplyFilter(id,_)
-                )
-            }i
-*/
 
           }
             
       }
 
-
+/*
       //-----------------------------------------------------------------------
       case ApplyFilter(id,filter) => {
 
@@ -482,6 +471,7 @@ with FilteringOps
         )
 
       }
+*/
 
       //-----------------------------------------------------------------------
       case ApplyFilters(
@@ -616,7 +606,7 @@ with FilteringOps
 
   }
 
-
+/*
   private def defaultFilter(
     mtbfiles: Iterable[MTBFile]
   ): Query.Filter = {
@@ -635,7 +625,7 @@ with FilteringOps
     Query.Filter(genders,ageRange,vitalStatus)
 
   }
-
+*/
 
   override def get(
     query: Query.Id

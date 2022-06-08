@@ -57,7 +57,7 @@ final case class Query
   submittedAt: Instant,
   mode: Coding[Query.Mode.Value],
   parameters: Query.Parameters,
-  filter: Query.Filter,
+//  filter: Query.Filter,
   filters: Query.Filters,
   zpms: Set[ZPM],
   lastUpdate: Instant

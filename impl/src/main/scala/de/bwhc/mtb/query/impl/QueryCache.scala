@@ -53,12 +53,12 @@ trait QueryCache
     query: Query
   ): Unit
 
-
+/*
   def applyFilter(
     id: Query.Id,
     f: Query.Filter
   ): Option[Query]
-
+*/
 
   def get(
     id: Query.Id,
@@ -105,8 +105,8 @@ with Logging
   private val resultSets: Map[Query.Id,Snapshots] =
     TrieMap.empty[Query.Id,Snapshots]
 
-  private val filters: Map[Query.Id,Query.Filter] =
-    TrieMap.empty[Query.Id,Query.Filter]
+//  private val filters: Map[Query.Id,Query.Filter] =
+//    TrieMap.empty[Query.Id,Query.Filter]
 
 
 
@@ -149,8 +149,9 @@ with Logging
          log.info("Timed out query sessions detected, removing them...")
       }
 
-      queries --= timedOutQueryIds
-    
+//      queries --= timedOutQueryIds
+      timedOutQueryIds.foreach(remove)
+
       log.debug("Finished running clean-up task for timed out query sessions")
 
     }
@@ -170,10 +171,10 @@ with Logging
   //---------------------------------------------------------------------------
 
 
-  def newQueryId: Query.Id = Query.Id(randomUUID.toString)
+  override def newQueryId: Query.Id = Query.Id(randomUUID.toString)
   
 
-  def +=(
+  override def +=(
     qr: (Query, Snapshots)
   ): Unit = {
 
@@ -184,7 +185,7 @@ with Logging
   }
 
 
-  def update(
+  override def update(
     query: Query
   ): Unit = {
 
@@ -195,7 +196,7 @@ with Logging
   }
 
 
-  def update(
+  override def update(
     qr: (Query,Snapshots)
   ): Unit = {
 
@@ -206,7 +207,7 @@ with Logging
  
   }
 
-
+/*
   def applyFilter(
     id: Query.Id,
     f: Query.Filter
@@ -215,35 +216,40 @@ with Logging
       .tapEach(_ => filters += (id -> f))
       .headOption
   }
+*/
 
-  def get(
+  override def get(
     id: Query.Id,
   ): Option[Query] = {
     queries.get(id)
   }
 
 
-  def resultsOf(
+  override def resultsOf(
     id: Query.Id,
   ): Option[ResultSet] = {
-
+/*
     for {
       rs       <- resultSets.get(id)
       mtbfiles =  rs.map(_.data)
       f        =  filters.get(id)
       result   =  f.fold(mtbfiles)(mtbfiles.filter(_))
     } yield result
+*/
+    for {
+      rs <- resultSets.get(id)
+    } yield rs.map(_.data)
 
   }
 
 
-  def remove(
+  override def remove(
     id: Query.Id
   ): Unit = {
 
     queries    -= id
     resultSets -= id
-    filters    -= id
+//    filters    -= id
 
   }
 

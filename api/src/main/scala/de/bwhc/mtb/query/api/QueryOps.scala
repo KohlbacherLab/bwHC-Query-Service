@@ -157,14 +157,14 @@ object QueryOps
     )
     extends Command
 
-
+/*
     final case class ApplyFilter
     (
       id: Query.Id,
       filter: Query.Filter
     )
     extends Command
-
+*/
 
     final case class ApplyFilters
     (
@@ -211,8 +211,8 @@ object QueryOps
     implicit val formatUpdate =
       Json.format[Update]
  
-    implicit val formatApplyFilter =
-      Json.format[ApplyFilter]
+//    implicit val formatApplyFilter =
+//      Json.format[ApplyFilter]
 
     implicit val formatApplyFilters =
       Json.format[ApplyFilters]

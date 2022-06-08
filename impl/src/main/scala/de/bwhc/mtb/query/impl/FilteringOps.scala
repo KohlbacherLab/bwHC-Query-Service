@@ -274,11 +274,11 @@ trait FilteringOps
 
     case (ngsReport,specimen) =>
 
-      val specimenTypes =
-        filter.specimenType.selectedValues
+      val specimenTypes: Seq[Specimen.Type.Value] =
+        filter.specimenType.selectedValues.map(_.code)
 
-      val specimenLocalizations =
-        filter.specimenLocalization.selectedValues
+      val specimenLocalizations: Seq[Specimen.Collection.Localization.Value] =
+        filter.specimenLocalization.selectedValues.map(_.code)
 
       specimen.fold(
         specimenTypes.isEmpty && specimenLocalizations.isEmpty
@@ -300,7 +300,7 @@ trait FilteringOps
 
     recommendation =>
 
-      val selectedMedications =
+      val selectedMedications: Seq[Medication.Code] =
         filter.medication.flatMap(_.selectedValues.map(_.code))
 
       recommendation.priority.exists(filter.priority.isSelected) &&
@@ -316,10 +316,10 @@ trait FilteringOps
 
     case (therapy,response) =>
 
-      val responses = 
+      val responses: Seq[RECIST.Value] = 
         filter.response.selectedValues.map(_.code)
 
-      val selectedMedications =
+      val selectedMedications: Seq[Medication.Code] =
         filter.medication.flatMap(_.selectedValues.map(_.code))
      
       filter.status.selectedValues.map(_.code).contains(therapy.status) &&

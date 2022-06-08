@@ -164,7 +164,7 @@ class Tests extends AsyncFlatSpec
       allPatients   <- service.patients
 
       nAsExpected = queryPatients.value.size mustBe allPatients.size
-
+/*
       filterResult <- service !
                         ApplyFilter(
                           query.id,
@@ -175,6 +175,21 @@ class Tests extends AsyncFlatSpec
                             vitalStatus = Set(filterVitalStatus)
                           )
                         )
+*/
+      filterResult <- service !
+                        ApplyFilters(
+                          query.id,
+                          Some(
+                            query.filters.patientFilter.copy(
+                              gender = query.filters.patientFilter.gender.selectOnly(Coding(filterGender)),
+                              vitalStatus = query.filters.patientFilter.vitalStatus.selectOnly(Coding(filterVitalStatus))
+                            )
+                          ),
+                          None,
+                          None,
+                          None,
+                        )
+
 
       filteredQuery = filterResult.toOption.value
 
