@@ -171,7 +171,6 @@ object ParameterValidation extends Validator[String,Parameters]
 
     case mwu @ MedicationWithUsage(medication,usageSet) =>
 
-//      atc.entries().find(_.code.value == medication.code.value) mustBe defined otherwise (
       atc.findWithCode(medication.code.value) mustBe defined otherwise (
         s"Invalid ATC Medication code ${medication.code.value}"
       ) map (
@@ -238,7 +237,6 @@ object ParameterValidation extends Validator[String,Parameters]
           Some(genes.toSet),
           Some(snvs.toSet),
           Some(cnvs.toSet),
-          params.tumorMutationalBurden,
           Some(medsWithUsage.toSet),
           params.responses.map(
             _.map(

@@ -155,7 +155,6 @@ object Query
     copyNumberVariants: Option[Set[CNVParameters]],
 //    dnaFusionParameters: Option[Set[FusionParameters]],
 //    rnaFusionParameters: Option[Set[FusionParameters]]
-    tumorMutationalBurden: Option[Interval[Int]],
     medicationsWithUsage: Option[Set[MedicationWithUsage]],
     responses: Option[Set[Coding[RECIST.Value]]]
   )
@@ -164,7 +163,6 @@ object Query
   {
     val empty = 
       Parameters(
-        None,
         None,
         None,
         None,

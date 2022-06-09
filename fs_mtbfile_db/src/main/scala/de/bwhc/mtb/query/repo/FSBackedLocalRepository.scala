@@ -139,29 +139,14 @@ object FSBackedLocalDB
 
       snv.gene.flatMap(_.hgncId).exists(_.value equalsIgnoreCase params.gene.code.value) &&
         params.dnaChange.fold(true)(
-          pttrn => snv.dnaChange.exists(_.code.value.toLowerCase contains pttrn.value.toLowerCase)
+          pttrn => snv.dnaChange.exists(_.code.value contains pttrn.value)
+//          pttrn => snv.dnaChange.exists(_.code.value.toLowerCase contains pttrn.value.toLowerCase)
         ) &&
         params.aminoAcidChange.fold(true)(
-          pttrn => snv.aminoAcidChange.exists(_.code.value.toLowerCase contains pttrn.value.toLowerCase)
+          pttrn => snv.aminoAcidChange.exists(_.code.value contains pttrn.value)
+//          pttrn => snv.aminoAcidChange.exists(_.code.value.toLowerCase contains pttrn.value.toLowerCase)
         )
   }
-
-/*
-  implicit def snvParametersToPredicate(params: SNVParameters): SimpleVariant => Boolean = {
-  
-    snv =>
-
-      import SimpleVariant.{DNAChange,AminoAcidChange}
-
-      snv.gene.flatMap(_.hgncId).exists(_.value equalsIgnoreCase params.gene.code.value) &&
-        params.dnaChange.fold(true){
-          case DNAChange(pttrn) => snv.dnaChange.exists(_.code.value.toLowerCase contains pttrn.toLowerCase)
-        } &&
-        params.aminoAcidChange.fold(true){
-          case AminoAcidChange(pttrn) => snv.aminoAcidChange.exists(_.code.value.toLowerCase contains pttrn.toLowerCase)
-        }
-  }
-*/
 
 
   implicit def cnvParametersToPredicate(params: CNVParameters): CNV => Boolean = {
@@ -226,13 +211,10 @@ object FSBackedLocalDB
       val usedDrugCodes =
         mtbfile.molecularTherapies
           .getOrElse(List.empty)
-          .filter(_.history.headOption isDefined)
-          .map(_.history.head)
+          .flatMap(_.history.maxByOption(_.recordedOn))
           .map {
-            case th: OngoingTherapy   => th.medication.getOrElse(List.empty).toSet
-            case th: StoppedTherapy   => th.medication.getOrElse(List.empty).toSet 
-            case th: CompletedTherapy => th.medication.getOrElse(List.empty).toSet 
-            case _                    => Set.empty[Medication.Coding]
+            case th: StartedMolecularTherapy => th.medication.getOrElse(List.empty).toSet 
+            case _                           => Set.empty[Medication.Coding]
           }
           .map(_.map(_.code))
           .fold(Set.empty[Medication.Code])(_ ++ _)
@@ -288,21 +270,8 @@ object FSBackedLocalDB
             cnvParams.forall(cnvs.exists(_))
           }
 
-       
-      val tmbMatches =
-        params.tumorMutationalBurden
-          .fold(true)(
-            tmbRange =>
-          
-            mtbfile.ngsReports.getOrElse(List.empty)
-              .flatMap(_.tmb.toList)
-              .exists(tmb => tmbRange.contains(tmb.value.toInt))
-          )  
-        
-
       snvsMatch &&
       cnvsMatch &&
-      tmbMatches &&
       matchesQuery(mutatedGeneIds, mutatedGeneIdSelection) &&
       matchesQuery(mtbfile.diagnoses.getOrElse(List.empty).map(_.icd10.get.code), diagnosesSelection) &&
       matchesQuery(mtbfile.histologyReports.getOrElse(List.empty).flatMap(_.tumorMorphology).map(_.value.code), morphologySelection) &&
