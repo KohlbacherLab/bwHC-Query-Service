@@ -148,7 +148,8 @@ trait Mappings
         medication.toRight(NotAvailable),
         medicationClasses.toRight(NotAvailable),
         rec.priority.toRight(NotAvailable),
-        rec.levelOfEvidence.map(_.mapTo[LevelOfEvidenceDisplay]).toRight(NotAvailable),
+//        rec.levelOfEvidence.map(_.mapTo[LevelOfEvidenceDisplay]).toRight(NotAvailable),
+        rec.levelOfEvidence.map(_.grading.code).toRight(NotAvailable),
         variants.map(_.mapTo[SupportingVariantDisplay])
       )
   }

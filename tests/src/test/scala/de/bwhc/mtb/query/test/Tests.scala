@@ -15,7 +15,8 @@ import de.bwhc.mtb.data.entry.dtos.{
   ICD10GM,
   Gender,
   ZPM,
-  ValueSet
+  ValueSet,
+  LevelOfEvidence
 }
 
 import de.bwhc.util.data.{Interval,ClosedInterval}
@@ -138,12 +139,13 @@ class Tests extends AsyncFlatSpec
   }
 
 
-  import extensions._
-  import de.bwhc.mtb.data.entry.dtos.ValueSets._  // For ValueSet[Gender.Value]
-  import de.bwhc.mtb.query.api.Mappings._         // For ValueSet[VitalStatus.Value]
-
 
   "Local Query results and operations" must "be valid" in {
+
+    import extensions._
+    import de.bwhc.mtb.data.entry.dtos.ValueSets._  // For ValueSet[Gender.Value]
+    import de.bwhc.mtb.query.api.Mappings._         // For ValueSet[VitalStatus.Value]
+    import LevelOfEvidence.Grading.{m1A,m1B}
 
     val mode   = Coding(Mode.Local,None)
     val params = Parameters.empty
@@ -164,42 +166,43 @@ class Tests extends AsyncFlatSpec
       allPatients   <- service.patients
 
       nAsExpected = queryPatients.value.size mustBe allPatients.size
-/*
-      filterResult <- service !
-                        ApplyFilter(
-                          query.id,
-                          query.filter.copy(
-//                            genders = query.filter.genders.selectOnly(Coding(filterGender)),
-//                            vitalStatus = query.filter.vitalStatus.selectOnly(Coding(filterVitalStatus))
-                            genders = Set(filterGender),
-                            vitalStatus = Set(filterVitalStatus)
-                          )
-                        )
-*/
-      filterResult <- service !
-                        ApplyFilters(
-                          query.id,
-                          Some(
-                            query.filters.patientFilter.copy(
-                              gender = query.filters.patientFilter.gender.selectOnly(Coding(filterGender)),
-                              vitalStatus = query.filters.patientFilter.vitalStatus.selectOnly(Coding(filterVitalStatus))
-                            )
-                          ),
-                          None,
-                          None,
-                          None,
-                        )
+
+      filterResult <-
+        service ! ApplyFilters(
+          query.id,
+          Some(
+            query.filters.patientFilter
+              .copy(
+                gender = query.filters.patientFilter.gender.selectOnly(Coding(filterGender)),
+                vitalStatus = query.filters.patientFilter.vitalStatus.selectOnly(Coding(filterVitalStatus))
+              )
+          ),
+          None,
+          Some(
+            query.filters.therapyRecommendationFilter.copy(
+              levelOfEvidence =
+                query.filters.therapyRecommendationFilter.levelOfEvidence
+                  .selectOnly(m1A,m1B)
+            )
+          ),
+          None,
+        )
 
 
       filteredQuery = filterResult.toOption.value
 
       filteredPatients <- service.patientsFrom(filteredQuery.id)
 
+      filteredRecommendations <- service.therapyRecommendationsFrom(filteredQuery.id)
+
       vitalStatusAsExpected =
         filteredPatients.value.map(_.vitalStatus) must contain only (vitalStatusDisplay)
 
       gendersAsExpected =
         filteredPatients.value.map(_.gender) must contain only (genderDisplay)
+
+      levelOfEvidenceAsExpected =
+        filteredRecommendations.value.map(_.levelOfEvidence.toOption.value) must contain only (m1A,m1B)
 
     } yield succeed
 
