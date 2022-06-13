@@ -1,6 +1,7 @@
 package de.bwhc.mtb.broker.connector
 
 
+import java.net.URI
 import play.api.libs.json.Json
 
 
@@ -15,11 +16,12 @@ object Sites
   final case class Entry
   (
     id: String,
-    name: String
+    name: String,
+    baseUri: URI
   )
 
-  implicit val formatEntry = Json.writes[Entry]
-  implicit val format      = Json.writes[Sites]
+  implicit val formatEntry = Json.format[Entry]
+  implicit val format      = Json.format[Sites]
 
 }
 

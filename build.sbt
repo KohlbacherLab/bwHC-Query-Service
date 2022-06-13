@@ -24,7 +24,7 @@ lazy val global = project
      api,
      impl,
      bwhc_connector,
-//     bwhc_broker_connector,
+     bwhc_broker_connector,
      fs_mtbfile_db,
      tests
   )

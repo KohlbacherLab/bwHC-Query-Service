@@ -195,7 +195,6 @@ object Query
 
   final case class TherapyRecommendationFilter 
   (
-//    ecogStatus: Selection[Coding[ECOG.Value]],
     priority: Selection[TherapyRecommendation.Priority.Value],
     levelOfEvidence: Selection[LevelOfEvidence.Grading.Value],
     medication: List[Selection[Coding[Medication.Code]]]
@@ -222,7 +221,6 @@ object Query
   implicit val formatThRecFilter = Json.format[TherapyRecommendationFilter]
   implicit val formatMolThFilter = Json.format[MolecularTherapyFilter]
   implicit val formatFilters     = Json.format[Filters]
-
 
 
   final case class Filter

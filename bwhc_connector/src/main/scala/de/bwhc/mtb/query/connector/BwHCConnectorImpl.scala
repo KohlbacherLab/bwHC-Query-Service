@@ -15,6 +15,7 @@ import play.api.libs.ws.{
   StandaloneWSRequest
 }
 import play.api.libs.ws.ahc.StandaloneAhcWSClient
+//import play.api.libs.ws.StandaloneWSResponse
 import play.api.libs.ws.JsonBodyReadables._
 import play.api.libs.ws.JsonBodyWritables._
 import play.api.libs.ws.DefaultBodyWritables._
@@ -93,6 +94,14 @@ with Logging
 
   private val OK = 200
 
+
+/*
+  private def gather[T](
+    responses: List[Future[StandaloneWSResponse]]]
+  )(
+    implicit ec: ExecutionContext
+  ): Future[Ior[]]
+*/
 
   override def peerStatusReport(
     implicit ec: ExecutionContext

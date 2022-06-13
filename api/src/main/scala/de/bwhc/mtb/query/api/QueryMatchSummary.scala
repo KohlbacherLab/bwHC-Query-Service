@@ -20,34 +20,34 @@ import de.bwhc.mtb.data.entry.views.{
 }
 
 
+/*
+final case class QueryMatchSummary
+(
+  id: Patient.Id,
+  rsv: Option[Double],   // Retrieval Status Value
+  diagnoses: Option[List[Coding[ICD10GM]]],
+  tumorMorphology: Option[List[Coding[ICDO3M]]],
+  variants: Option[List[Variant]],
+  medications: Option[List[Coding[Medication.Code]]],
+  responses: Option[List[Coding[RECIST.Value]]]
+)
+*/
 
 final case class QueryMatchSummary
 (
   id: Patient.Id,
   rsv: Option[Double],   // Retrieval Status Value
-  diagnoses: Option[Set[Coding[ICD10GM]]],
-  tumorMorphology: Option[Set[Coding[ICDO3M]]],
-  variants: Option[Set[Variant]],
-  medications: Option[Set[Coding[Medication.Code]]],
-  responses: Option[Set[Coding[RECIST.Value]]]
+  diagnoses: Option[List[ICD10Display]],
+  tumorMorphology: Option[List[ICDO3MDisplay]],
+  variants: Option[List[SupportingVariantDisplay]],
+  medications: Option[List[MedicationDisplay]],
+  responses: Option[List[ResponseDisplay]]
 )
 
 
-final case class QueryMatchSummaryView
-(
-  id: Patient.Id,
-  rsv: Option[Double],   // Retrieval Status Value
-  diagnoses: Option[Set[ICD10Display]],
-  tumorMorphology: Option[Set[ICDO3MDisplay]],
-  variants: Option[Set[SupportingVariantDisplay]],
-  medications: Option[Set[MedicationDisplay]],
-  responses: Option[Set[ResponseDisplay]]
-)
-
-
-object QueryMatchSummaryView
+object QueryMatchSummary
 {
 
   implicit val format =
-    Json.writes[QueryMatchSummaryView]
+    Json.writes[QueryMatchSummary]
 }

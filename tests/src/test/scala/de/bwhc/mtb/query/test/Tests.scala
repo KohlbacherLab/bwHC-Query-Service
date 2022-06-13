@@ -16,7 +16,8 @@ import de.bwhc.mtb.data.entry.dtos.{
   Gender,
   ZPM,
   ValueSet,
-  LevelOfEvidence
+  LevelOfEvidence,
+  Specimen
 }
 
 import de.bwhc.util.data.{Interval,ClosedInterval}
@@ -140,7 +141,7 @@ class Tests extends AsyncFlatSpec
 
 
 
-  "Local Query results and operations" must "be valid" in {
+  "Local Query results and filtering operations" must "be valid" in {
 
     import extensions._
     import de.bwhc.mtb.data.entry.dtos.ValueSets._  // For ValueSet[Gender.Value]
@@ -152,8 +153,11 @@ class Tests extends AsyncFlatSpec
 
     val filterGender       = Gender.Female
     val filterVitalStatus  = VitalStatus.Alive
-    val vitalStatusDisplay = ValueSet[VitalStatus.Value].displayOf(filterVitalStatus).get
-    val genderDisplay      = ValueSet[Gender.Value].displayOf(filterGender).get
+    val filterSpecimenType = Specimen.Type.FFPE
+
+    val vitalStatusDisplay  = ValueSet[VitalStatus.Value].displayOf(filterVitalStatus).get
+    val genderDisplay       = ValueSet[Gender.Value].displayOf(filterGender).get
+    val specimenTypeDisplay = ValueSet[Specimen.Type.Value].displayOf(filterSpecimenType).get
 
     for {
 
@@ -177,7 +181,12 @@ class Tests extends AsyncFlatSpec
                 vitalStatus = query.filters.patientFilter.vitalStatus.selectOnly(Coding(filterVitalStatus))
               )
           ),
-          None,
+          Some(
+            query.filters.ngsSummaryFilter
+              .copy(
+                specimenType = query.filters.ngsSummaryFilter.specimenType.selectOnly(Coding(filterSpecimenType))
+              )
+          ),
           Some(
             query.filters.therapyRecommendationFilter.copy(
               levelOfEvidence =
@@ -193,6 +202,8 @@ class Tests extends AsyncFlatSpec
 
       filteredPatients <- service.patientsFrom(filteredQuery.id)
 
+      filteredNgsSummaries <- service.ngsSummariesFrom(filteredQuery.id)
+
       filteredRecommendations <- service.therapyRecommendationsFrom(filteredQuery.id)
 
       vitalStatusAsExpected =
@@ -200,6 +211,9 @@ class Tests extends AsyncFlatSpec
 
       gendersAsExpected =
         filteredPatients.value.map(_.gender) must contain only (genderDisplay)
+
+      specimenTypeAsExpected =
+        filteredNgsSummaries.value.map(_.specimenType.toOption.value) must contain only (specimenTypeDisplay)
 
       levelOfEvidenceAsExpected =
         filteredRecommendations.value.map(_.levelOfEvidence.toOption.value) must contain only (m1A,m1B)
