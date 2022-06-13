@@ -95,14 +95,6 @@ with Logging
   private val OK = 200
 
 
-/*
-  private def gather[T](
-    responses: List[Future[StandaloneWSResponse]]]
-  )(
-    implicit ec: ExecutionContext
-  ): Future[Ior[]]
-*/
-
   override def peerStatusReport(
     implicit ec: ExecutionContext
   ): Future[PeerStatusReport] = {
