@@ -3,6 +3,6 @@
 
   <Site id="UKT"/>
 
-  <Broker baseURL="http://localhost"/>
+  <Broker baseURL="http://localhost:9001"/>
 
 </ConnectorConfig>

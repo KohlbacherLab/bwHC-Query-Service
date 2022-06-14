@@ -2,12 +2,12 @@ package de.bwhc.mtb.query.connector
 
 
 
+import java.net.URL
 import scala.concurrent.{
   ExecutionContext,
   Future
 }
 import scala.concurrent.duration._
-
 import akka.actor.ActorSystem
 import akka.stream.Materializer
 import play.api.libs.ws.{
@@ -15,27 +15,24 @@ import play.api.libs.ws.{
   StandaloneWSRequest
 }
 import play.api.libs.ws.ahc.StandaloneAhcWSClient
-//import play.api.libs.ws.StandaloneWSResponse
+import play.api.libs.ws.{
+  StandaloneWSRequest => WSRequest,
+  StandaloneWSResponse => WSResponse
+}
 import play.api.libs.ws.JsonBodyReadables._
 import play.api.libs.ws.JsonBodyWritables._
 import play.api.libs.ws.DefaultBodyWritables._
 import play.api.libs.ws.DefaultBodyReadables._
-
 import play.api.libs.json.{Json,JsValue}
-
 import cats.data.{Ior,IorNel}
 import cats.syntax.ior._
 import cats.syntax.either._
 import cats.instances.list._
-
-
 import de.bwhc.util.Logging
-
 import de.bwhc.mtb.data.entry.dtos.{
   MTBFile,
   ZPM
 }
-
 import de.bwhc.mtb.query.api.{
   Querier,
   Query,
@@ -46,7 +43,6 @@ import de.bwhc.mtb.query.api.{
   LocalQCReport,
   Snapshot
 }
-
 import de.bwhc.mtb.query.impl.{
   BwHCConnector,
   BwHCConnectorProvider
@@ -87,7 +83,7 @@ extends BwHCConnector
 with Logging
 {
 
-  private val timeout = 20 seconds
+  private val timeout = 10 seconds
 
   private val BWHC_SITE_ORIGIN  = "bwhc-site-origin" 
   private val BWHC_QUERY_USERID = "bwhc-query-userid"
@@ -95,12 +91,95 @@ with Logging
   private val OK = 200
 
 
+  private def request(
+    baseUrl: URL,
+    rawUri: String
+  ): WSRequest = {
+
+    val uri =
+      if (rawUri startsWith "/") rawUri.substring(1)
+      else rawUri
+
+    wsclient.url(s"${baseUrl}$uri")
+      .withRequestTimeout(timeout)
+  }
+
+
+  private def scatter(
+    uri: String
+  )(
+    implicit ec: ExecutionContext
+  ): List[(ZPM,WSRequest)] = {
+
+    for {
+      (site,baseUrl) <- config.peerBaseURLs.toList
+    } yield {
+      site -> request(baseUrl,uri)
+    }
+  }
+
+
+  private def gather[T,U](
+    responses: List[Future[T]]
+  )(
+    acc: U
+  )(
+    f: (U,T) => U
+  )(
+    implicit ec: ExecutionContext
+  ): Future[U] =
+    Future.foldLeft(responses)(acc)(f)
+
+
+  private def scatterGather[T,U](
+    uri: String
+  )(
+    trf: (ZPM,WSRequest) => Future[T]
+  )(
+    acc: U
+  )(
+    aggr: (U,T) => U
+  )(
+    implicit ec: ExecutionContext
+  ): Future[U] = {
+
+    import scala.util.chaining._
+
+    scatter(uri)
+      .map(trf.tupled) pipe (
+        res => gather(res)(acc)(aggr)
+      )
+
+  }
+
   override def peerStatusReport(
     implicit ec: ExecutionContext
   ): Future[PeerStatusReport] = {
 
     import PeerStatus._
 
+    scatterGather("status")(
+      (site,request) =>
+        request
+          .get
+          .map(
+            response =>
+              if (response.status == OK)
+                PeerStatusReport.Info(site,Online,"-")
+              else
+                PeerStatusReport.Info(site,Offline,response.body[String])
+          )
+          .recover {
+            case t => PeerStatusReport.Info(site,Offline,t.getMessage)
+          }
+    )(
+      List.empty[PeerStatusReport.Info]
+    )(
+      _ :+ _
+    )
+    .map(st => PeerStatusReport(peerStatus = st)) 
+
+/*
     val requests =
       for {
         (site,baseUrl) <- config.peerBaseURLs
@@ -127,7 +206,7 @@ with Logging
    
      Future.foldLeft(requests)(List.empty[PeerStatusReport.Info])(_ :+ _)
        .map(st => PeerStatusReport(peerStatus = st)) 
-
+*/
   }
 
 
@@ -141,6 +220,29 @@ with Logging
 
     log.debug(s"Requesting LocalQCReports from peers for Querier ${querier.value}")
 
+    scatterGather("LocalQCReport")(
+      (site,request) =>
+        request
+          .post(
+            Map(
+              BWHC_SITE_ORIGIN  -> origin.value,
+              BWHC_QUERY_USERID -> querier.value
+            )
+          )
+          .map(_.body[JsValue].as[LocalQCReport]) //TODO: handle validation errors
+          .map(_.rightIor[String].toIorNel)
+          .recover {
+            case t => 
+              s"Error in LocalQCReport response from bwHC Site ${site.value}: ${t.getMessage}".leftIor[LocalQCReport].toIorNel
+          }
+          .map(_.map(List(_)))
+    )(
+      List.empty[LocalQCReport].rightIor[String].toIorNel
+    )(
+      _ combine _
+    )
+
+/*
     val requests =
       for {
         (zpm,baseUrl) <- config.peerBaseURLs
@@ -167,7 +269,7 @@ with Logging
 
 
     Future.foldLeft(requests)(List.empty[LocalQCReport].rightIor[String].toIorNel)(_ combine _)
-
+*/
   }
 
 
@@ -179,6 +281,24 @@ with Logging
 
     log.debug(s"Executing Peer-to-Peer Query ${q}") //TODO: Query to JSON
 
+    scatterGather("query")(
+      (site,request) =>
+        request
+          .post(Json.toJson(q))
+          .map(_.body[JsValue].as[SearchSet[Snapshot[MTBFile]]]) //TODO: handle validation errors
+          .map(_.entries) 
+          .map(_.rightIor[String].toIorNel)
+          .recover {
+            case t => 
+              s"Error in Peer-to-peer Query response from bwHC Site ${site.value}: ${t.getMessage}".leftIor[List[Snapshot[MTBFile]]].toIorNel
+          }
+    )(
+      List.empty[Snapshot[MTBFile]].rightIor[String].toIorNel
+    )(
+      _ combine _
+    )
+
+/*
     val requests =
       for {
         (zpm,baseUrl) <- config.peerBaseURLs
@@ -199,7 +319,7 @@ with Logging
       } yield req
 
     Future.foldLeft(requests)(List.empty[Snapshot[MTBFile]].rightIor[String].toIorNel)(_ combine _)
-
+*/
   }
 
   override def execute(
@@ -220,10 +340,11 @@ with Logging
 
       case Some(baseUrl) => {
 
-        log.debug(s"Site: ${site.value}  URL: ${baseUrl.toString}")
+        log.debug(s"Site: ${site.value}  URL: ${baseUrl}")
 
-        wsclient.url(baseUrl.toString + "MTBFile:request")
-          .withRequestTimeout(timeout)
+//        wsclient.url(baseUrl.toString + "MTBFile:request")
+//          .withRequestTimeout(timeout)
+        request(baseUrl,"MTBFile:request")
           .post(Json.toJson(mfreq))
           .map {
             resp =>

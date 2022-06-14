@@ -17,7 +17,7 @@ object Sites
   (
     id: String,
     name: String,
-    baseUri: URI
+//    baseUri: URI
   )
 
   implicit val formatEntry = Json.format[Entry]

@@ -7,18 +7,15 @@ import java.io.{
   InputStream
 }
 import java.net.{URI,URL}
-
 import scala.util.{Try,Using}
-
 import scala.xml._
-
 import play.api.libs.json.{
   Json,
   JsObject,
   JsValue
 }
-
 import de.bwhc.mtb.data.entry.dtos.ZPM
+
 
 trait Config
 {  
