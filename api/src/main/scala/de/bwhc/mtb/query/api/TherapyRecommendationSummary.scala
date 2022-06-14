@@ -26,7 +26,6 @@ final case class TherapyRecommendationSummary
   medication: NotAvailable Or MedicationDisplay,
   medicationClasses: NotAvailable Or MedicationDisplay,
   priority: NotAvailable Or TherapyRecommendation.Priority.Value,
-//  levelOfEvidence: NotAvailable Or LevelOfEvidenceDisplay,
   levelOfEvidence: NotAvailable Or LevelOfEvidence.Grading.Value,
   supportingVariants: List[SupportingVariantDisplay]
 )

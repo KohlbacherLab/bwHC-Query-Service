@@ -133,30 +133,30 @@ object Query
 
   final case class CNVParameters
   (
-    genes: Set[Coding[Gene.HgncId]],
+    genes: List[Coding[Gene.HgncId]],
     `type`: Option[CNV.Type.Value],
     copyNumber: Option[Interval[Int]]
   )
 
-/*
+
   final case class FusionParameters
   (
-    fusionPartner5prGene: Option[Coding[Gene.HgncId]],
-    fusionPartner3prGene: Option[Coding[Gene.HgncId]],
+    fivePrimeGene: Option[Coding[Gene.HgncId]],
+    threePrimeGene: Option[Coding[Gene.HgncId]],
   )
-*/
+
 
   final case class Parameters
   (
-    diagnoses: Option[Set[Coding[ICD10GM]]],
-    tumorMorphology: Option[Set[Coding[ICDO3M]]],
-    mutatedGenes: Option[Set[Coding[Gene.HgncId]]],
-    simpleVariants: Option[Set[SNVParameters]],
-    copyNumberVariants: Option[Set[CNVParameters]],
-//    dnaFusionParameters: Option[Set[FusionParameters]],
-//    rnaFusionParameters: Option[Set[FusionParameters]]
-    medicationsWithUsage: Option[Set[MedicationWithUsage]],
-    responses: Option[Set[Coding[RECIST.Value]]]
+    diagnoses: Option[List[Coding[ICD10GM]]],
+    tumorMorphology: Option[List[Coding[ICDO3M]]],
+    mutatedGenes: Option[List[Coding[Gene.HgncId]]],
+    simpleVariants: Option[List[SNVParameters]],
+    copyNumberVariants: Option[List[CNVParameters]],
+    dnaFusions: Option[List[FusionParameters]],
+    rnaFusions: Option[List[FusionParameters]],
+    medicationsWithUsage: Option[List[MedicationWithUsage]],
+    responses: Option[List[Coding[RECIST.Value]]]
   )
 
   object Parameters
@@ -169,14 +169,17 @@ object Query
         None,
         None,
         None,
+        None,
+        None,
         None
       )
   }
 
 
-  implicit val formatSNVParameters = Json.format[SNVParameters]
-  implicit val formatCNVParameters = Json.format[CNVParameters]
-  implicit val formatParameters    = Json.format[Parameters]
+  implicit val formatSNVParameters    = Json.format[SNVParameters]
+  implicit val formatCNVParameters    = Json.format[CNVParameters]
+  implicit val formatFusionParameters = Json.format[FusionParameters]
+  implicit val formatParameters       = Json.format[Parameters]
 
 
   final case class PatientFilter 

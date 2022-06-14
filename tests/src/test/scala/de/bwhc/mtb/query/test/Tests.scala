@@ -239,12 +239,11 @@ class Tests extends AsyncFlatSpec
     val params =
       Parameters.empty.copy(
 //        diagnoses = Some(Set(Coding(ICD10GM(superClass.code.value),None)))
-        diagnoses = Some(Set(Coding(ICD10GM("C25"),None)))
+        diagnoses = Some(List(Coding(ICD10GM("C25"),None)))
       )
 
     for {
 
-//      result <- service ! Submit(querier,mode,params)
       result <- service ! Submit(mode,params)
 
       query = result.onlyRight.value

@@ -85,7 +85,8 @@ object FSBackedLocalDB
     val initData: Seq[(Patient.Id,Snapshot[MTBFile])] =
       Option {
         dataDir.listFiles(
-          (_,name) => name.startsWith("Patient_") && name.endsWith(".json")
+          (_,name) =>
+            (name startsWith "Patient_") && (name endsWith ".json")
         )
           .to(LazyList)
           .map(toFileInputStream)
@@ -112,7 +113,7 @@ object FSBackedLocalDB
       //------------------------------------------------------
       .groupBy(_.data.patient.id)
       .view
-// sort Snapshots in DECREASING order of timestamp, i.e. to have MOST RECENT as head
+      // sort Snapshots in DECREASING order of timestamp, i.e. to have MOST RECENT as head
       .mapValues(_.maxBy(_.timestamp)) // get most recent snapshot
       .toSeq
 
@@ -140,11 +141,9 @@ object FSBackedLocalDB
       snv.gene.flatMap(_.hgncId).exists(_.value equalsIgnoreCase params.gene.code.value) &&
         params.dnaChange.fold(true)(
           pttrn => snv.dnaChange.exists(_.code.value contains pttrn.value)
-//          pttrn => snv.dnaChange.exists(_.code.value.toLowerCase contains pttrn.value.toLowerCase)
         ) &&
         params.aminoAcidChange.fold(true)(
           pttrn => snv.aminoAcidChange.exists(_.code.value contains pttrn.value)
-//          pttrn => snv.aminoAcidChange.exists(_.code.value.toLowerCase contains pttrn.value.toLowerCase)
         )
   }
 
@@ -161,21 +160,48 @@ object FSBackedLocalDB
   }
 
 
+  implicit def fusionParametersToDNAFusionPredicate(params: FusionParameters): DNAFusion => Boolean = {
+    dna =>
+
+      params.fivePrimeGene.fold(true)(
+        gene => dna.fusionPartner5prime.flatMap(_.gene.hgncId).exists(_.value == gene.code.value)
+      ) &&
+        params.threePrimeGene.fold(true)(
+          gene => dna.fusionPartner3prime.flatMap(_.gene.hgncId).exists(_.value == gene.code.value)
+        ) 
+
+  }
+
+
+  implicit def fusionParametersToRNAFusionPredicate(params: FusionParameters): RNAFusion => Boolean = {
+    rna =>
+
+      params.fivePrimeGene.fold(true)(
+        gene => rna.fusionPartner5prime.flatMap(_.gene.hgncId).exists(_.value == gene.code.value)
+      ) &&
+        params.threePrimeGene.fold(true)(
+          gene => rna.fusionPartner3prime.flatMap(_.gene.hgncId).exists(_.value == gene.code.value)
+        ) 
+
+  }
+
+
   implicit def toPredicate(params: Parameters): Snapshot[MTBFile] => Boolean = {
 
     case Snapshot(_,_,mtbfile) =>
 
       def matchesQuery[T](
         vals: Iterable[T],
-        selection: Set[T]
+        selection: List[T]
       ): Boolean = {
         selection.isEmpty || vals.exists(selection.contains)
       }
 
-      val diagnosesSelection            = params.diagnoses.getOrElse(Set.empty).map(_.code)
-      val morphologySelection           = params.tumorMorphology.getOrElse(Set.empty).map(_.code)
-      val responsesSelection            = params.responses.getOrElse(Set.empty).map(_.code)
-      val medicationsWithUsageSelection = params.medicationsWithUsage.getOrElse(Set.empty)
+
+      lazy val diagnosesSelection            = params.diagnoses.getOrElse(List.empty).map(_.code)
+      lazy val morphologySelection           = params.tumorMorphology.getOrElse(List.empty).map(_.code)
+      lazy val responsesSelection            = params.responses.getOrElse(List.empty).map(_.code)
+      lazy val medicationsWithUsageSelection = params.medicationsWithUsage.getOrElse(List.empty)
 
       val (
         anyUsageDrugSelection,
@@ -185,30 +211,30 @@ object FSBackedLocalDB
       ) =
         medicationsWithUsageSelection.foldLeft(
           (
-           Set.empty[Medication.Code],
-           Set.empty[Medication.Code],
-           Set.empty[Medication.Code],
-           Set.empty[Medication.Code]
+           List.empty[Medication.Code],
+           List.empty[Medication.Code],
+           List.empty[Medication.Code],
+           List.empty[Medication.Code]
           )
         ){
           case ((any,recomm,used,both),Query.MedicationWithUsage(med,usages)) =>
             usages match {
-              case s if (s.exists(_.code == Recommended) && s.exists(_.code == Used)) => (any, recomm, used, both + med.code) 
-              case s if s.exists(_.code == Recommended)                               => (any, recomm + med.code, used, both) 
-              case s if s.exists(_.code == Used)                                      => (any, recomm, used + med.code, both) 
-              case _                                                                  => (any + med.code, recomm, used, both)
+              case s if (s.exists(_.code == Recommended) && s.exists(_.code == Used)) => (any, recomm, used, med.code :: both) 
+              case s if s.exists(_.code == Recommended)                               => (any, med.code :: recomm, used, both) 
+              case s if s.exists(_.code == Used)                                      => (any, recomm, med.code :: used, both) 
+              case _                                                                  => (med.code :: any, recomm, used, both)
             }
         }
 
 
-      val recommendedDrugCodes =
+      lazy val recommendedDrugCodes =
         mtbfile.recommendations
           .getOrElse(List.empty)
           .map(_.medication.getOrElse(List.empty).toSet)
           .map(_.map(_.code))
           .fold(Set.empty[Medication.Code])(_ ++ _)
 
-      val usedDrugCodes =
+      lazy val usedDrugCodes =
         mtbfile.molecularTherapies
           .getOrElse(List.empty)
           .flatMap(_.history.maxByOption(_.recordedOn))
@@ -220,10 +246,10 @@ object FSBackedLocalDB
           .fold(Set.empty[Medication.Code])(_ ++ _)
 
 
-      val mutatedGeneIdSelection =
-        params.mutatedGenes.getOrElse(Set.empty).map(_.code)
+      lazy val mutatedGeneIdSelection =
+        params.mutatedGenes.getOrElse(List.empty).map(_.code)
 
-      val mutatedGeneIds =
+      lazy val mutatedGeneIds =
         for {
 
           ngs <- mtbfile.ngsReports.getOrElse(List.empty)
@@ -239,14 +265,34 @@ object FSBackedLocalDB
                  .flatMap(_.hgncId.toList)
               )
 
-          geneIds <- snvGeneIds ++ cnvGeneIds
+          dnaFusionGeneIds =
+            ngs.dnaFusions.getOrElse(List.empty)
+              .flatMap(
+                dna =>
+                  dna.fusionPartner5prime.flatMap(_.gene.hgncId) ++
+                    dna.fusionPartner3prime.flatMap(_.gene.hgncId)
+              )
 
-          //TODO: genes from RNA-/DNA-Fusion and RNA-Seq
+          rnaFusionGeneIds =
+            ngs.rnaFusions.getOrElse(List.empty)
+              .flatMap(
+                dna =>
+                  dna.fusionPartner5prime.flatMap(_.gene.hgncId) ++
+                    dna.fusionPartner3prime.flatMap(_.gene.hgncId)
+              )
+
+          geneIds <-
+            snvGeneIds ++
+             cnvGeneIds ++
+              dnaFusionGeneIds ++
+               rnaFusionGeneIds
+
+          //TODO: genes from RNA-Seq??
 
         } yield geneIds
 
 
-      val snvsMatch =
+      lazy val snvsMatch =
         params.simpleVariants.filter(_.nonEmpty)
           .fold(true){ snvParams => 
 
@@ -258,7 +304,7 @@ object FSBackedLocalDB
             snvParams.forall(snvs.exists(_))
           }
         
-      val cnvsMatch =
+      lazy val cnvsMatch =
         params.copyNumberVariants.filter(_.nonEmpty)
           .fold(true){ cnvParams => 
 
@@ -270,8 +316,34 @@ object FSBackedLocalDB
             cnvParams.forall(cnvs.exists(_))
           }
 
+      lazy val dnaFusionsMatch =
+        params.dnaFusions.filter(_.nonEmpty)
+          .fold(true){ fusionParams => 
+
+            val dnaFusions =
+              mtbfile.ngsReports
+                .getOrElse(List.empty)
+                .flatMap(_.dnaFusions.getOrElse(List.empty))
+
+            fusionParams.forall(dnaFusions.exists(_))
+          }
+
+      lazy val rnaFusionsMatch =
+        params.rnaFusions.filter(_.nonEmpty)
+          .fold(true){ fusionParams => 
+
+            val rnaFusions =
+              mtbfile.ngsReports
+                .getOrElse(List.empty)
+                .flatMap(_.rnaFusions.getOrElse(List.empty))
+
+            fusionParams.forall(rnaFusions.exists(_))
+          }
+
       snvsMatch &&
       cnvsMatch &&
+      dnaFusionsMatch &&
+      rnaFusionsMatch &&
       matchesQuery(mutatedGeneIds, mutatedGeneIdSelection) &&
       matchesQuery(mtbfile.diagnoses.getOrElse(List.empty).map(_.icd10.get.code), diagnosesSelection) &&
       matchesQuery(mtbfile.histologyReports.getOrElse(List.empty).flatMap(_.tumorMorphology).map(_.value.code), morphologySelection) &&

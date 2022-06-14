@@ -1,7 +1,7 @@
 package de.bwhc.mtb.query.impl
 
 
-
+import cats.data.Ior
 import cats.data.Validated.{validNel,invalidNel}
 import cats.data.ValidatedNel
 import de.bwhc.util.data.Validation._
@@ -201,12 +201,62 @@ object ParameterValidation extends Validator[String,Parameters]
     case params @ CNVParameters(genes,typ,copyNumber) =>
 
     (
-      if (genes.nonEmpty) validateEach(genes.toList)
-      else invalidNel("CNV-Paramaters: Genes must be non-empty")
+      if (genes.nonEmpty) validateEach(genes)
+      else invalidNel("CNV-Parameters: Genes must be non-empty")
     )
     .map(
-      codings => params.copy(genes = codings.toSet)
+      codings => params.copy(genes = codings)
     )
+  }
+
+/*
+  implicit val fusionParametersValidator: Validator[String,FusionParameters] = {
+    case params @ FusionParameters(fivePr,threePr) =>
+
+      Ior.fromOptions(fivePr,threePr) mustBe (defined) otherwise (
+        "Fusion Parameters: at least one of 5' and 3' fusion partner gene MUST be selected"
+      ) andThen {
+        _.get.fold(
+          fvPr  => (validate(fvPr).map(Some(_)), validNel[String,Option[Coding[Gene.HgncId]]](None)),
+          thrPr => (validNel[String,Option[Coding[Gene.HgncId]]](None), validate(thrPr).map(Some(_))),
+          (fvPr,thrPr) => 
+            (
+              validate(fvPr).map(Some(_)),
+              validate(thrPr).map(Some(_))
+            )
+          )
+          .mapN(
+            (fv,th) => params.copy(fivePrimeGene = fv,threePrimeGene = th)
+          )
+      }
+  }
+*/
+
+
+  implicit val fusionParametersValidator: Validator[String,FusionParameters] = {
+    case params @ FusionParameters(fivePr,threePr) =>
+
+      Ior.fromOptions(fivePr,threePr) mustBe (defined) otherwise (
+        "Fusion Parameters: at least one of 5' and 3' fusion partner gene MUST be selected"
+      ) andThen {
+        _.get.fold(
+          fvPr  =>
+            validate(fvPr)
+              .map(coding => params.copy(fivePrimeGene = Some(coding))),
+
+          thrPr =>
+            validate(thrPr)
+              .map(coding => params.copy(threePrimeGene = Some(coding))),
+
+          (fvPr,thrPr) => 
+            (
+             validate(fvPr),
+             validate(thrPr)
+            )
+            .mapN(
+              (fv,th) => params.copy(fivePrimeGene = Some(fv),threePrimeGene = Some(th)))
+            )
+      }
   }
 
 
@@ -217,27 +267,33 @@ object ParameterValidation extends Validator[String,Parameters]
     // TODO: validate that at least 1 parameter is set (diagnosis, or variant or medication)
 
     (
-      validateEach(params.diagnoses.getOrElse(Set.empty).toList),
+      validateEach(params.diagnoses.getOrElse(List.empty)),
 
-      validateEach(params.tumorMorphology.getOrElse(Set.empty).toList),
+      validateEach(params.tumorMorphology.getOrElse(List.empty)),
 
-      validateEach(params.mutatedGenes.getOrElse(Set.empty).toList),
+      validateEach(params.mutatedGenes.getOrElse(List.empty)),
 
-      validateEach(params.simpleVariants.getOrElse(Set.empty).toList),
+      validateEach(params.simpleVariants.getOrElse(List.empty)),
       
-      validateEach(params.copyNumberVariants.getOrElse(Set.empty).toList),
+      validateEach(params.copyNumberVariants.getOrElse(List.empty)),
 
-      validateEach(params.medicationsWithUsage.getOrElse(Set.empty).toList)
+      validateEach(params.dnaFusions.getOrElse(List.empty)),
+
+      validateEach(params.rnaFusions.getOrElse(List.empty)),
+
+      validateEach(params.medicationsWithUsage.getOrElse(List.empty))
     )
     .mapN {
-      (diags,tumorMorphology,genes,snvs,cnvs,medsWithUsage) =>
+      (diags,tumorMorphology,genes,snvs,cnvs,dnaFusions,rnaFusions,medsWithUsage) =>
         Parameters(
-          Some(diags.toSet),
-          Some(tumorMorphology.toSet),
-          Some(genes.toSet),
-          Some(snvs.toSet),
-          Some(cnvs.toSet),
-          Some(medsWithUsage.toSet),
+          Some(diags),
+          Some(tumorMorphology),
+          Some(genes),
+          Some(snvs),
+          Some(cnvs),
+          Some(dnaFusions),
+          Some(rnaFusions),
+          Some(medsWithUsage),
           params.responses.map(
             _.map(
               c => c.copy(display = ValueSet[RECIST.Value].displayOf(c.code))
@@ -249,5 +305,3 @@ object ParameterValidation extends Validator[String,Parameters]
   } 
 
 }
-
-

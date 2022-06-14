@@ -39,7 +39,7 @@ object ParameterProcessor extends (Parameters => Parameters)
   
     val expandedDiagnoses =
       params.diagnoses
-        .getOrElse(Set.empty)
+        .getOrElse(List.empty)
         .flatMap {
           coding => 
           
@@ -47,14 +47,15 @@ object ParameterProcessor extends (Parameters => Parameters)
             .map(
               _.subClasses
                .map(c => Coding(ICD10GM(c.value),None))
+               .toList
             )
-            .getOrElse(Set.empty) + coding 
+            .getOrElse(List.empty) :+ coding 
 
         }
 
     val expandedMorphologies =
       params.tumorMorphology
-        .getOrElse(Set.empty)
+        .getOrElse(List.empty)
         .flatMap {
           coding => 
           
@@ -62,14 +63,15 @@ object ParameterProcessor extends (Parameters => Parameters)
             .map(
               _.subClasses
                .map(c => Coding(ICDO3M(c.value),None))
+               .toList
             )
-            .getOrElse(Set.empty) + coding
+            .getOrElse(List.empty) :+ coding
 
         }
 
     val expandedDrugs =
       params.medicationsWithUsage
-        .getOrElse(Set.empty)
+        .getOrElse(List.empty)
         .flatMap {
           case coding @ MedicationWithUsage(medication,usage) =>
          
@@ -81,8 +83,9 @@ object ParameterProcessor extends (Parameters => Parameters)
                     usage
                   )
                 )
+                .toList
               )
-              .getOrElse(Set.empty) + coding
+              .getOrElse(List.empty) :+ coding
         }
 
     params.copy(
