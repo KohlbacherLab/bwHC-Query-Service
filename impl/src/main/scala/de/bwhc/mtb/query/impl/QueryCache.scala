@@ -25,7 +25,7 @@ import de.bwhc.mtb.data.entry.dtos.MTBFile
 
 trait QueryCacheProvider extends SPI[QueryCache]
 
-object QueryCache extends SPILoader(classOf[QueryCacheProvider])
+object QueryCache extends SPILoader[QueryCacheProvider]
 
 
 trait QueryCache

@@ -24,7 +24,7 @@ import de.bwhc.mtb.data.entry.dtos.{
 
 trait LocalDBProvider extends SPI[LocalDB]
 
-object LocalDB extends SPILoader(classOf[LocalDBProvider])
+object LocalDB extends SPILoader[LocalDBProvider]
 
 
 trait LocalDB

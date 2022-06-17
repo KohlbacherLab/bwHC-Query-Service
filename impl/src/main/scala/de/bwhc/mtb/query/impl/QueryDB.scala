@@ -44,4 +44,4 @@ trait QueryDB extends QueryDBOps[Future,ExecutionContext]
 
 trait QueryDBProvider extends SPI[QueryDB]
 
-object QueryDB extends SPILoader(classOf[QueryDBProvider])
+object QueryDB extends SPILoader[QueryDBProvider]

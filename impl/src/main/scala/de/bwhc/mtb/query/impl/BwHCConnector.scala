@@ -20,7 +20,7 @@ import de.bwhc.mtb.data.entry.dtos.{
 
 trait BwHCConnectorProvider extends SPI[BwHCConnector]
 
-object BwHCConnector extends SPILoader(classOf[BwHCConnectorProvider])
+object BwHCConnector extends SPILoader[BwHCConnectorProvider]
 
 
 trait BwHCConnector

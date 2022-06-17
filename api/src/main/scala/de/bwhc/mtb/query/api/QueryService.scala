@@ -16,4 +16,4 @@ extends DataOps
 
 trait QueryServiceProvider extends SPI[QueryService]
 
-object QueryService extends SPILoader(classOf[QueryServiceProvider])
+object QueryService extends SPILoader[QueryServiceProvider]
