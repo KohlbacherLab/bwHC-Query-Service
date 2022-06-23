@@ -200,14 +200,16 @@ object Query
   (
     priority: Selection[TherapyRecommendation.Priority.Value],
     levelOfEvidence: Selection[LevelOfEvidence.Grading.Value],
-    medication: List[Selection[Coding[Medication.Code]]]
+    medication: Selection[Coding[Medication.Code]]
+//    medication: List[Selection[Coding[Medication.Code]]]
   )
 
   final case class MolecularTherapyFilter 
   (
     status: Selection[Coding[MolecularTherapy.Status.Value]],
     recordingDate: ClosedInterval[YearMonth],
-    medication: List[Selection[Coding[Medication.Code]]],
+    medication: Selection[Coding[Medication.Code]],
+//    medication: List[Selection[Coding[Medication.Code]]],
     response: Selection[Coding[RECIST.Value]]
   )
 

@@ -129,11 +129,19 @@ trait FilteringOps
       mtbfiles.flatMap(_.recommendations.getOrElse(List.empty))
         .toList
 
+    val medications =
+      recommendations.flatMap(_.medication.getOrElse(List.empty))
+        .distinctBy(_.code)
+        .flatMap(coding => catalog.findWithCode(coding.code.value))
+        .toList
+
+/*
     val medicationGroups =
       recommendations.flatMap(_.medication.getOrElse(List.empty))
         .distinctBy(_.code)
         .flatMap(coding => catalog.findWithCode(coding.code.value))
         .groupBy(_.parent.flatMap(catalog.find(_)))
+*/
 
     val priorities =
       recommendations.flatMap(_.priority)
@@ -155,6 +163,14 @@ trait FilteringOps
         LevelOfEvidence.Grading.values.toSeq
           .map(l => Selection.Item(l, evidenceLevels contains l))
       ),
+      Selection(
+        "Empfohlene Medikationen",
+        medications
+          .map(
+            med => Selection.Item(Coding(Medication.Code(med.code.value),Some(med.name)),true)
+          )
+      )  
+/*
       medicationGroups.toList
         .map {
           case (group,medications) =>
@@ -164,7 +180,8 @@ trait FilteringOps
                 med => Selection.Item(Coding(Medication.Code(med.code.value),Some(med.name)),true)
               )
             )
-        },
+        }
+*/
     )
 
   }
@@ -188,6 +205,7 @@ trait FilteringOps
     val recordingDates =
       therapies.map(th => YearMonth.from(th.recordedOn))
 
+/*
     val medicationGroups =
       therapies.flatMap {
         case th: StartedMolecularTherapy => th.medication.getOrElse(List.empty)
@@ -197,6 +215,16 @@ trait FilteringOps
       .distinctBy(_.code)
       .flatMap(coding => catalog.findWithCode(coding.code.value))
       .groupBy(_.parent.flatMap(catalog.find(_)))
+*/
+
+    val medications =
+      therapies.flatMap {
+        case th: StartedMolecularTherapy => th.medication.getOrElse(List.empty)
+        case _                           => List.empty
+      }
+      .toList
+      .distinctBy(_.code)
+      .flatMap(coding => catalog.findWithCode(coding.code.value))
 
     val responses =
       mtbfiles.flatMap(_.responses.getOrElse(List.empty))
@@ -212,6 +240,14 @@ trait FilteringOps
       ClosedInterval(
         recordingDates.minOption.getOrElse(YearMonth.now) -> recordingDates.maxOption.getOrElse(YearMonth.now)
       ),
+      Selection(
+        "Verabreichte Medikationen",
+        medications
+          .map(
+            med => Selection.Item(Coding(Medication.Code(med.code.value),Some(med.name)),true)
+          )
+      ),
+/*
       medicationGroups.toList
         .map {
           case (group,medications) =>
@@ -222,6 +258,7 @@ trait FilteringOps
               )
             )
         },
+*/
       Selection(
         "Response",
         RECIST.values.toSeq
@@ -301,7 +338,8 @@ trait FilteringOps
     recommendation =>
 
       val selectedMedications: Seq[Medication.Code] =
-        filter.medication.flatMap(_.selectedValues.map(_.code))
+        filter.medication.selectedValues.map(_.code)
+//        filter.medication.flatMap(_.selectedValues.map(_.code))
 
       recommendation.priority.exists(filter.priority.isSelected) &&
       recommendation.levelOfEvidence.map(_.grading.code).exists(filter.levelOfEvidence.isSelected) &&
@@ -320,7 +358,8 @@ trait FilteringOps
         filter.response.selectedValues.map(_.code)
 
       val selectedMedications: Seq[Medication.Code] =
-        filter.medication.flatMap(_.selectedValues.map(_.code))
+        filter.medication.selectedValues.map(_.code)
+//        filter.medication.flatMap(_.selectedValues.map(_.code))
      
       filter.status.selectedValues.map(_.code).contains(therapy.status) &&
       filter.recordingDate.contains(YearMonth.from(therapy.recordedOn)) &&
