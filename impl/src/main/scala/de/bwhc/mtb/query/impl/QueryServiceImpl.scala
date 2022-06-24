@@ -368,7 +368,6 @@ with FilteringOps
                     Instant.now,
                     mode.withDisplay,
                     validatedParams,
-//                    defaultFilter(results.map(_.data)),
                     DefaultFilters(results.map(_.data)),
                     zpms,
                     Instant.now
@@ -482,28 +481,34 @@ with FilteringOps
         optTherapyFilter
       ) => {
 
-        val updatedQuery =
+        val result =
           for {
             query <- queryCache.get(id)
-            updated =
+
+            updatedFilters =
+              patch(
+                query.filters
+              )(
+                optPatientFilter.map(f => (filters => filters.copy(patientFilter = f))),
+                optNGSFilter.map(f => (filters => filters.copy(ngsSummaryFilter = f))),
+                optRecommendationFilter.map(f => (filters => filters.copy(therapyRecommendationFilter = f))),
+                optTherapyFilter.map(f => (filters => filters.copy(molecularTherapyFilter = f)))
+              )
+
+            updatedQuery =
               query.copy(
-                filters =
-                  patch(
-                    query.filters
-                  )(
-                    optPatientFilter.map(f => filters => filters.copy(patientFilter = f)),
-                    optNGSFilter.map(f => filters => filters.copy(ngsSummaryFilter = f)),
-                    optRecommendationFilter.map(f => filters => filters.copy(therapyRecommendationFilter = f)),
-                    optTherapyFilter.map(f => filters => filters.copy(molecularTherapyFilter = f))
-                  ),
+                filters = updatedFilters,
                 lastUpdate = Instant.now
               )
-            _ =  queryCache.update(updated)
-            _ =  log.trace(s"Applied filter to Query ${id.value}")
-          } yield updated
+
+            _ =  queryCache.update(updatedQuery)
+
+            _ =  log.info(s"Applied filter to Query ${id.value}")
+
+          } yield updatedQuery
 
         Future.successful(
-          updatedQuery.map(_.rightIor[String])
+          result.map(_.rightIor[String])
             .getOrElse(s"Invalid Query ID ${id.value}".leftIor[Query])
             .toIorNel
         )
@@ -546,8 +551,7 @@ with FilteringOps
     patches.foldLeft(
       t
     )(
-      (tpr,patch) =>
-        patch.fold(tpr)(p => p(tpr))
+      (tpr,patch) => patch.fold(tpr)(p => p(tpr))
     )
   }
 
@@ -606,26 +610,6 @@ with FilteringOps
 
   }
 
-/*
-  private def defaultFilter(
-    mtbfiles: Iterable[MTBFile]
-  ): Query.Filter = {
-
-    import extensions._
-
-    val patients = mtbfiles.map(_.patient)
-
-    val genders = patients.map(_.gender).toSet
-
-    val ages = patients.map(_.age).filter(_.isDefined).map(_.get)
-    val ageRange = ClosedInterval(ages.minOption.getOrElse(0) -> ages.maxOption.getOrElse(0))
-
-    val vitalStatus = patients.map(_.vitalStatus).toSet
-   
-    Query.Filter(genders,ageRange,vitalStatus)
-
-  }
-*/
 
   override def get(
     query: Query.Id
@@ -787,7 +771,7 @@ with FilteringOps
 
     Future {
       for {
-        patientFilter  <-
+        patientFilter <-
           queryCache.get(query)
             .map(_.filters.patientFilter)
 

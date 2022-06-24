@@ -126,7 +126,7 @@ with Logging
     log.debug(s"Requesting bwHC peer info")
 
     request("/sites")
-      .get
+      .get()
       .andThen {
         case Failure(t) =>
           log.error(s"Broker connection error: ${t.getMessage}")
@@ -202,7 +202,7 @@ with Logging
     scatterGather("/bwhc/peer2peer/api/status")(
       (site,request) =>
         request
-          .get
+          .get()
           .map(
             response =>
               if (response.status == OK)

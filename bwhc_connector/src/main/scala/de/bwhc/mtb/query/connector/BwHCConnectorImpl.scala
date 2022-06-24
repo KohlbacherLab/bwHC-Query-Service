@@ -161,7 +161,7 @@ with Logging
     scatterGather("status")(
       (site,request) =>
         request
-          .get
+          .get()
           .map(
             response =>
               if (response.status == OK)
@@ -178,35 +178,6 @@ with Logging
       _ :+ _
     )
     .map(st => PeerStatusReport(peerStatus = st)) 
-
-/*
-    val requests =
-      for {
-        (site,baseUrl) <- config.peerBaseURLs
-
-        _ = log.debug(s"Site: ${site.value}  URL: ${baseUrl.toString}")
-
-        req =
-          wsclient.url(baseUrl.toString + "status")
-            .withRequestTimeout(timeout)
-            .get
-            .map(
-              response =>
-                if (response.status == OK)
-                  PeerStatusReport.Info(site,Online,"-")
-                else
-                  PeerStatusReport.Info(site,Offline,response.body[String])
-            )
-            .recover {
-              case t => PeerStatusReport.Info(site,Offline,t.getMessage)
-            }
-
-      } yield req
-
-   
-     Future.foldLeft(requests)(List.empty[PeerStatusReport.Info])(_ :+ _)
-       .map(st => PeerStatusReport(peerStatus = st)) 
-*/
   }
 
 
@@ -242,34 +213,6 @@ with Logging
       _ combine _
     )
 
-/*
-    val requests =
-      for {
-        (zpm,baseUrl) <- config.peerBaseURLs
-
-        _ = log.debug(s"Site: ${zpm.value}  URL: ${baseUrl.toString}")
-
-        req =
-          wsclient.url(baseUrl.toString + "LocalQCReport")
-            .withRequestTimeout(timeout)
-            .post(
-              Map(
-                BWHC_SITE_ORIGIN  -> origin.value,
-                BWHC_QUERY_USERID -> querier.value
-              )
-            )
-            .map(_.body[JsValue].as[LocalQCReport]) //TODO: handle validation errors
-            .map(_.rightIor[String].toIorNel)
-            .recover {
-              case t => 
-                s"Error in LocalQCReport response from bwHC Site ${zpm.value}: ${t.getMessage}".leftIor[LocalQCReport].toIorNel
-            }
-            .map(_.map(List(_)))
-      } yield req
-
-
-    Future.foldLeft(requests)(List.empty[LocalQCReport].rightIor[String].toIorNel)(_ combine _)
-*/
   }
 
 
@@ -298,28 +241,6 @@ with Logging
       _ combine _
     )
 
-/*
-    val requests =
-      for {
-        (zpm,baseUrl) <- config.peerBaseURLs
-
-        _ = log.debug(s"Site: ${zpm.value}  URL: ${baseUrl.toString}")
-
-        req =
-          wsclient.url(baseUrl.toString + "query")
-            .withRequestTimeout(timeout)
-            .post(Json.toJson(q))
-            .map(_.body[JsValue].as[SearchSet[Snapshot[MTBFile]]]) //TODO: handle validation errors
-            .map(_.entries) 
-            .map(_.rightIor[String].toIorNel)
-            .recover {
-              case t => 
-                s"Error in Peer-to-peer Query response from bwHC Site ${zpm.value}: ${t.getMessage}".leftIor[List[Snapshot[MTBFile]]].toIorNel
-            }
-      } yield req
-
-    Future.foldLeft(requests)(List.empty[Snapshot[MTBFile]].rightIor[String].toIorNel)(_ combine _)
-*/
   }
 
   override def execute(
@@ -342,8 +263,6 @@ with Logging
 
         log.debug(s"Site: ${site.value}  URL: ${baseUrl}")
 
-//        wsclient.url(baseUrl.toString + "MTBFile:request")
-//          .withRequestTimeout(timeout)
         request(baseUrl,"MTBFile:request")
           .post(Json.toJson(mfreq))
           .map {

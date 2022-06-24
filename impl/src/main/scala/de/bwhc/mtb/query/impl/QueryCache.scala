@@ -53,12 +53,6 @@ trait QueryCache
     query: Query
   ): Unit
 
-/*
-  def applyFilter(
-    id: Query.Id,
-    f: Query.Filter
-  ): Option[Query]
-*/
 
   def get(
     id: Query.Id,
@@ -105,11 +99,8 @@ with Logging
   private val resultSets: Map[Query.Id,Snapshots] =
     TrieMap.empty[Query.Id,Snapshots]
 
-//  private val filters: Map[Query.Id,Query.Filter] =
-//    TrieMap.empty[Query.Id,Query.Filter]
 
-
-
+/*
   import scala.language.implicitConversions
 
   implicit def toPredicate(
@@ -127,7 +118,7 @@ with Logging
       (filter.vitalStatus contains pat.vitalStatus)
           
   }
-
+*/
 
   //---------------------------------------------------------------------------
   // Scheduled clean-up task of cached data
@@ -149,7 +140,6 @@ with Logging
          log.info("Timed out query sessions detected, removing them...")
       }
 
-//      queries --= timedOutQueryIds
       timedOutQueryIds.foreach(remove)
 
       log.debug("Finished running clean-up task for timed out query sessions")
@@ -175,7 +165,7 @@ with Logging
   
 
   override def +=(
-    qr: (Query, Snapshots)
+    qr: (Query,Snapshots)
   ): Unit = {
 
     val (query,results) = qr
@@ -190,7 +180,7 @@ with Logging
   ): Unit = {
 
     for {
-      q  <- queries.replace(query.id,query)
+      q  <- queries.put(query.id,query)
     } yield ()
  
   }
@@ -202,21 +192,11 @@ with Logging
 
     val (query,results) = qr
 
-    queries.replace(query.id,query)
-    resultSets.replace(query.id,results)
+    queries.put(query.id,query)
+    resultSets.put(query.id,results)
  
   }
 
-/*
-  def applyFilter(
-    id: Query.Id,
-    f: Query.Filter
-  ): Option[Query] = {
-    get(id)
-      .tapEach(_ => filters += (id -> f))
-      .headOption
-  }
-*/
 
   override def get(
     id: Query.Id,
@@ -249,7 +229,6 @@ with Logging
 
     queries    -= id
     resultSets -= id
-//    filters    -= id
 
   }
 

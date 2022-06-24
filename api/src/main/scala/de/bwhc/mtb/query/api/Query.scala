@@ -57,7 +57,6 @@ final case class Query
   submittedAt: Instant,
   mode: Coding[Query.Mode.Value],
   parameters: Query.Parameters,
-//  filter: Query.Filter,
   filters: Query.Filters,
   zpms: Set[ZPM],
   lastUpdate: Instant
@@ -227,15 +226,6 @@ object Query
   implicit val formatMolThFilter = Json.format[MolecularTherapyFilter]
   implicit val formatFilters     = Json.format[Filters]
 
-
-  final case class Filter
-  (
-    genders: Set[Gender.Value],
-    ageRange: ClosedInterval[Int],
-    vitalStatus: Set[VitalStatus.Value]
-  )
-
-  implicit val formatFilter = Json.format[Filter]
 
   implicit val formatQuery = Json.format[Query]
 
