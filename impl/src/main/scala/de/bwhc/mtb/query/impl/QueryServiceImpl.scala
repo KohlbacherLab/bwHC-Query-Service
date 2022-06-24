@@ -420,7 +420,6 @@ with FilteringOps
                   
                       query =
                         updatedQuery.copy(
-//                          filter = defaultFilter(results.map(_.data)),
                           filters = DefaultFilters(results.map(_.data)),
                           zpms = results.foldLeft(Set.empty[ZPM])((acc,snp) => acc + snp.data.patient.managingZPM.get)
                         )
@@ -448,29 +447,6 @@ with FilteringOps
             
       }
 
-/*
-      //-----------------------------------------------------------------------
-      case ApplyFilter(id,filter) => {
-
-        log.info(s"Applying Filter to Query ${id.value}:\n ${prettyPrint(toJson(filter))}")
-
-        val applied =
-          for {
-            query   <- (queryCache get id)
-            _       =  queryCache.applyFilter(id,filter)
-            updated =  query.copy(filter = filter, lastUpdate = Instant.now)
-            _       =  queryCache.update(updated)
-            _       =  log.trace(s"Applied filter to Query ${id.value}")
-          } yield updated
-
-        Future.successful(
-          applied.map(_.rightIor[String])
-            .getOrElse(s"Invalid Query ID ${id.value}".leftIor[Query])
-            .toIorNel
-        )
-
-      }
-*/
 
       //-----------------------------------------------------------------------
       case ApplyFilters(
@@ -489,10 +465,22 @@ with FilteringOps
               patch(
                 query.filters
               )(
-                optPatientFilter.map(f => (filters => filters.copy(patientFilter = f))),
-                optNGSFilter.map(f => (filters => filters.copy(ngsSummaryFilter = f))),
-                optRecommendationFilter.map(f => (filters => filters.copy(therapyRecommendationFilter = f))),
-                optTherapyFilter.map(f => (filters => filters.copy(molecularTherapyFilter = f)))
+                optPatientFilter
+                  .tapEach(f => log.info(s"Query ${id.value}, applying PatientFilter:\n${prettyPrint(toJson(f))}"))
+                  .headOption
+                  .map(f => (filters => filters.copy(patientFilter = f))),
+                optNGSFilter
+                  .tapEach(f => log.info(s"Query ${id.value}, applying NGSSummaryFilter:\n${prettyPrint(toJson(f))}"))
+                  .headOption
+                  .map(f => (filters => filters.copy(ngsSummaryFilter = f))),
+                optRecommendationFilter
+                  .tapEach(f => log.info(s"Query ${id.value}, applying TherapyRecommendationFilter:\n${prettyPrint(toJson(f))}"))
+                  .headOption
+                  .map(f => (filters => filters.copy(therapyRecommendationFilter = f))),
+                optTherapyFilter
+                  .tapEach(f => log.info(s"Query ${id.value}, applying MolecularTherapyFilter:\n${prettyPrint(toJson(f))}"))
+                  .headOption
+                  .map(f => (filters => filters.copy(molecularTherapyFilter = f)))
               )
 
             updatedQuery =
@@ -502,8 +490,6 @@ with FilteringOps
               )
 
             _ =  queryCache.update(updatedQuery)
-
-            _ =  log.info(s"Applied filter to Query ${id.value}")
 
           } yield updatedQuery
 
@@ -541,7 +527,7 @@ with FilteringOps
 
   }
 
-
+  
   private def patch[T](
     t: T
   )(
