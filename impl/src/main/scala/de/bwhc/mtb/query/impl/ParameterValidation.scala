@@ -209,29 +209,6 @@ object ParameterValidation extends Validator[String,Parameters]
     )
   }
 
-/*
-  implicit val fusionParametersValidator: Validator[String,FusionParameters] = {
-    case params @ FusionParameters(fivePr,threePr) =>
-
-      Ior.fromOptions(fivePr,threePr) mustBe (defined) otherwise (
-        "Fusion Parameters: at least one of 5' and 3' fusion partner gene MUST be selected"
-      ) andThen {
-        _.get.fold(
-          fvPr  => (validate(fvPr).map(Some(_)), validNel[String,Option[Coding[Gene.HgncId]]](None)),
-          thrPr => (validNel[String,Option[Coding[Gene.HgncId]]](None), validate(thrPr).map(Some(_))),
-          (fvPr,thrPr) => 
-            (
-              validate(fvPr).map(Some(_)),
-              validate(thrPr).map(Some(_))
-            )
-          )
-          .mapN(
-            (fv,th) => params.copy(fivePrimeGene = fv,threePrimeGene = th)
-          )
-      }
-  }
-*/
-
 
   implicit val fusionParametersValidator: Validator[String,FusionParameters] = {
     case params @ FusionParameters(fivePr,threePr) =>
@@ -259,6 +236,72 @@ object ParameterValidation extends Validator[String,Parameters]
       }
   }
 
+/*
+  override def apply(params: Parameters): ValidatedNel[String,Parameters] = {
+
+    import ValueSets._
+
+    // Validate that at least 1 parameter is set (diagnosis, or variant or medication)
+
+    val diagnoses            = params.diagnoses.getOrElse(List.empty)
+    val tumorMorphology      = params.tumorMorphology.getOrElse(List.empty)
+    val mutatedGenes         = params.mutatedGenes.getOrElse(List.empty)
+    val simpleVariants       = params.simpleVariants.getOrElse(List.empty)    
+    val copyNumberVariants   = params.copyNumberVariants.getOrElse(List.empty)
+    val dnaFusions           = params.dnaFusions.getOrElse(List.empty)
+    val rnaFusions           = params.rnaFusions.getOrElse(List.empty)
+    val medicationsWithUsage = params.medicationsWithUsage.getOrElse(List.empty)
+
+    diagnoses mustBe nonEmpty orElse (
+      tumorMorphology mustBe nonEmpty
+    ) orElse (
+      mutatedGenes mustBe nonEmpty
+    ) orElse (
+      simpleVariants mustBe nonEmpty
+    ) orElse (
+      copyNumberVariants mustBe nonEmpty
+    ) orElse (
+      dnaFusions mustBe nonEmpty
+    ) orElse (
+      rnaFusions mustBe nonEmpty
+    ) orElse (
+      medicationsWithUsage mustBe nonEmpty
+    ) otherwise (
+      "At least one of the following query parameters must be set: diagnosis, tumor morphology, genes with any alteration, SNVs, CNVs, DNA- or RNA-Fusion, or medication"
+    ) andThen (_ =>
+      (
+        validateEach(diagnoses),     
+        validateEach(tumorMorphology),
+        validateEach(mutatedGenes),
+        validateEach(simpleVariants),
+        validateEach(copyNumberVariants),
+        validateEach(dnaFusions),
+        validateEach(rnaFusions),
+        validateEach(medicationsWithUsage)
+      )
+      .mapN {
+        (diags,tumorMorph,genes,snvs,cnvs,dnaFns,rnaFns,medsWithUsage) =>
+          Parameters(
+            Some(diags),
+            Some(tumorMorph),
+            Some(genes),
+            Some(snvs),
+            Some(cnvs),
+            Some(dnaFns),
+            Some(rnaFns),
+            Some(medsWithUsage),
+            params.responses.map(
+              _.map(
+                c => c.copy(display = ValueSet[RECIST.Value].displayOf(c.code))
+              )
+            )
+          )
+      }
+    )
+
+  } 
+*/
+
 
   override def apply(params: Parameters): ValidatedNel[String,Parameters] = {
 
@@ -268,19 +311,12 @@ object ParameterValidation extends Validator[String,Parameters]
 
     (
       validateEach(params.diagnoses.getOrElse(List.empty)),
-
       validateEach(params.tumorMorphology.getOrElse(List.empty)),
-
       validateEach(params.mutatedGenes.getOrElse(List.empty)),
-
       validateEach(params.simpleVariants.getOrElse(List.empty)),
-      
       validateEach(params.copyNumberVariants.getOrElse(List.empty)),
-
       validateEach(params.dnaFusions.getOrElse(List.empty)),
-
       validateEach(params.rnaFusions.getOrElse(List.empty)),
-
       validateEach(params.medicationsWithUsage.getOrElse(List.empty))
     )
     .mapN {
@@ -303,5 +339,6 @@ object ParameterValidation extends Validator[String,Parameters]
     }
 
   } 
+
 
 }

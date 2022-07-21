@@ -297,9 +297,10 @@ trait FilteringOps
     mtbfile =>
 
       val pat = mtbfile.patient
-
+      
       (filter.gender.selectedValues.map(_.code) contains pat.gender) &&
-      (pat.age.exists(filter.ageRange.contains)) &&
+      (pat.age.fold(true)(filter.ageRange.contains)) &&
+//      (pat.age.exists(filter.ageRange.contains)) &&
       (filter.vitalStatus.selectedValues.map(_.code) contains pat.vitalStatus)
 
   }
@@ -313,21 +314,21 @@ trait FilteringOps
 
       val specimenTypes: Seq[Specimen.Type.Value] =
         filter.specimenType.selectedValues.map(_.code)
-
+      
       val specimenLocalizations: Seq[Specimen.Collection.Localization.Value] =
         filter.specimenLocalization.selectedValues.map(_.code)
-
+      
       specimen.fold(
-        specimenTypes.isEmpty && specimenLocalizations.isEmpty
+        true
+//        specimenTypes.isEmpty && specimenLocalizations.isEmpty
       )(
         sp =>
-          sp.`type`.exists(specimenTypes.contains) && 
-          sp.collection.map(_.localization).exists(specimenLocalizations.contains)  
+          sp.`type`.fold(true)(specimenTypes.contains) && 
+          sp.collection.map(_.localization).fold(true)(specimenLocalizations.contains)  
+//          sp.`type`.exists(specimenTypes.contains) && 
+//          sp.collection.map(_.localization).exists(specimenLocalizations.contains)  
       ) &&
-      ngsReport.tmb.exists(
-        tmb => filter.tumorMutationalBurden.contains(tmb.value.toInt)
-      )
-
+      ngsReport.tmb.fold(true)(tmb => filter.tumorMutationalBurden.contains(tmb.value.toInt))
   }
 
 
@@ -340,11 +341,12 @@ trait FilteringOps
       val selectedMedications: Seq[Medication.Code] =
         filter.medication.selectedValues.map(_.code)
 //        filter.medication.flatMap(_.selectedValues.map(_.code))
-
-      recommendation.priority.exists(filter.priority.isSelected) &&
-      recommendation.levelOfEvidence.map(_.grading.code).exists(filter.levelOfEvidence.isSelected) &&
-      recommendation.medication.fold(selectedMedications.isEmpty)(_.exists(c => selectedMedications.contains(c.code)))
-    
+      
+//      recommendation.priority.exists(filter.priority.isSelected) &&
+//      recommendation.levelOfEvidence.map(_.grading.code).exists(filter.levelOfEvidence.isSelected) &&
+      recommendation.priority.fold(true)(filter.priority.isSelected) &&
+      recommendation.levelOfEvidence.map(_.grading.code).fold(true)(filter.levelOfEvidence.isSelected) &&
+      recommendation.medication.fold(true)(_.exists(c => selectedMedications.contains(c.code)))
   }
 
 
@@ -356,23 +358,23 @@ trait FilteringOps
 
       val responses: Seq[RECIST.Value] = 
         filter.response.selectedValues.map(_.code)
-
+      
       val selectedMedications: Seq[Medication.Code] =
         filter.medication.selectedValues.map(_.code)
 //        filter.medication.flatMap(_.selectedValues.map(_.code))
-     
+      
       filter.status.selectedValues.map(_.code).contains(therapy.status) &&
       filter.recordingDate.contains(YearMonth.from(therapy.recordedOn)) &&
       (therapy match {
         case th: StartedMolecularTherapy =>
-          th.medication.getOrElse(List.empty)
-            .exists(c => selectedMedications.contains(c.code))
-
+          th.medication.fold(true)(_.exists(c => selectedMedications.contains(c.code)))
+//          th.medication.getOrElse(List.empty)
+//            .exists(c => selectedMedications.contains(c.code))
+      
         case _ => 
           selectedMedications.isEmpty
       }) &&
-      response.map(_.value.code).fold(responses.isEmpty)(responses.contains)
-      
+      response.map(_.value.code).fold(true)(responses.contains)
   }
 
 }

@@ -33,6 +33,8 @@ final case class Selection[T]
   def isSelected(t: T): Boolean =
     items.exists(item => item.value == t && item.selected)
 
+  def isEmpty: Boolean =
+    this.selectedValues.isEmpty
 }
 
 object Selection

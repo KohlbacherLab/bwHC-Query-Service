@@ -237,10 +237,20 @@ class Tests extends AsyncFlatSpec
 //        .flatMap(c => icd10s.find(_.code == c.superClass.get)).get
 
     val params =
-      Parameters.empty.copy(
-//        diagnoses = Some(Set(Coding(ICD10GM(superClass.code.value),None)))
-        diagnoses = Some(List(Coding(ICD10GM("C25"),None)))
+      Parameters(
+        diagnoses = Some(List(Coding(ICD10GM("C25"),None))),
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None
       )
+//      Parameters.empty.copy(
+//        diagnoses = Some(List(Coding(ICD10GM("C25"),None)))
+//      )
 
     for {
 
