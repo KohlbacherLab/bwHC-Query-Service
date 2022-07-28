@@ -165,11 +165,20 @@ class Tests extends AsyncFlatSpec
 
       query = result.onlyRight.value
 
+      summary <- service.resultSummaryOf(query.id).map(_.value)
+
       queryPatients <- service.patientsFrom(query.id)
 
       allPatients   <- service.patients
 
-      nAsExpected = queryPatients.value.size mustBe allPatients.size
+      _ = queryPatients.value.size mustBe allPatients.size
+
+      _ <- service.ngsSummariesFrom(query.id).map(_.value.size mustBe summary.ngsReportCount)
+
+      _ <- service.therapyRecommendationsFrom(query.id).map(_.value.size mustBe summary.therapyRecommendationCount)
+
+      _ <- service.molecularTherapiesFrom(query.id).map(_.value.size mustBe summary.therapyCount)
+      
 
       filterResult <-
         service ! ApplyFilters(

@@ -7,13 +7,11 @@ import play.api.libs.json.Json
 final case class ResultSummary
 (
   query: Query.Id,
-  patientTotal: Int,
+  patientCount: Int,
+  ngsReportCount: Int,
+  therapyRecommendationCount: Int,
+  therapyCount: Int,
   completionStats: Seq[QCReport.CompletionLevelWithFrequency]
-/*
-  ngsReports: Int,
-  therapyRecommendations: Int,
-  therapies: Int  
-*/
 )
 
 object ResultSummary

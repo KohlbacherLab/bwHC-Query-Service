@@ -37,12 +37,7 @@ object QCReport
     val CarePlanIssued  = Value("Mit MTB-Beschluss")
     val FollowedUp      = Value("Mit Follow-up")
     val PatientDeceased = Value("Verstorben")
-/*
-    val Sequenced       = Value
-    val CarePlanIssued  = Value
-    val FollowedUp      = Value
-    val PatientDeceased = Value
-*/
+
     implicit val format = Json.formatEnum(this)
   }
 
