@@ -75,7 +75,7 @@ object ParameterProcessor extends (Parameters => Parameters)
         .flatMap {
           case coding @ MedicationWithUsage(medication,usage) =>
          
-            atc.find(ATC.Code(medication.code.value))
+            atc.find(ATC.Code(medication.code.value),atc.latestVersion)
               .map(
                 _.children.map( c =>
                   MedicationWithUsage(

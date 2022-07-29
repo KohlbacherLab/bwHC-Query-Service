@@ -1,7 +1,7 @@
 package de.bwhc.mtb.query.impl
 
 
-import java.time.{Year,YearMonth}
+import java.time.YearMonth
 import de.bwhc.util.data.ClosedInterval
 import de.bwhc.mtb.query.api.{
   Query,
@@ -137,7 +137,7 @@ trait FilteringOps
           coding =>
             catalog.findWithCode(
               coding.code.value,
-              Year.of(coding.version.get.toInt)
+              coding.version.get
             )
         )
         .toList
@@ -204,7 +204,8 @@ trait FilteringOps
         coding =>
           catalog.findWithCode(
             coding.code.value,
-            Year.of(coding.version.get.toInt)
+            coding.version.get
+//            Year.of(coding.version.get.toInt)
           )
       )
 
