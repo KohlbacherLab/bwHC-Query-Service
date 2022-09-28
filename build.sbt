@@ -25,6 +25,7 @@ lazy val global = project
      impl,
      bwhc_connector,
      bwhc_broker_connector,
+     bwhc_samply_connector,
      fs_mtbfile_db,
      tests
   )
@@ -87,6 +88,21 @@ lazy val bwhc_broker_connector = project
     impl
   )
 
+
+lazy val bwhc_samply_connector = project
+  .settings(
+    name := "bwhc-samply-connector",
+    settings,
+    libraryDependencies ++= Seq(
+      dependencies.scalatest,
+      dependencies.play_ws_client,
+      dependencies.play_ws_json,
+      dependencies.scala_xml
+    )
+  )
+  .dependsOn(
+    impl
+  )
 
 
 lazy val fs_mtbfile_db = project

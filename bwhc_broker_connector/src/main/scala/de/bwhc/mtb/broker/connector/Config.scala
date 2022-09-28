@@ -20,7 +20,7 @@ import de.bwhc.mtb.data.entry.dtos.ZPM
 trait Config
 {  
   def siteId: String
-  def brokerBaseURL: URL
+  def baseURL: URL
 }
 
 
@@ -32,16 +32,16 @@ object Config
   private case class Impl
   (
     siteId: String,
-    baseURL: String
+    url: String
   )
   extends Config
   {
-    override def brokerBaseURL =
+    override def baseURL =
       new URL(
-        if (baseURL endsWith "/")
-          baseURL
+        if (url endsWith "/")
+          url
         else
-          s"$baseURL/"
+          s"$url/"
       )
   }
 

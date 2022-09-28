@@ -100,26 +100,6 @@ with Logging
     TrieMap.empty[Query.Id,Snapshots]
 
 
-/*
-  import scala.language.implicitConversions
-
-  implicit def toPredicate(
-    filter: Query.Filter
-  ): MTBFile => Boolean = {
-
-    import extensions._
-
-    mtbfile =>
-
-      val pat = mtbfile.patient
-
-      (filter.genders contains pat.gender) &&
-      pat.age.exists(filter.ageRange.contains) &&
-      (filter.vitalStatus contains pat.vitalStatus)
-          
-  }
-*/
-
   //---------------------------------------------------------------------------
   // Scheduled clean-up task of cached data
   //---------------------------------------------------------------------------
@@ -208,14 +188,6 @@ with Logging
   override def resultsOf(
     id: Query.Id,
   ): Option[ResultSet] = {
-/*
-    for {
-      rs       <- resultSets.get(id)
-      mtbfiles =  rs.map(_.data)
-      f        =  filters.get(id)
-      result   =  f.fold(mtbfiles)(mtbfiles.filter(_))
-    } yield result
-*/
     for {
       rs <- resultSets.get(id)
     } yield rs.map(_.data)
