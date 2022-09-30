@@ -5,9 +5,9 @@
 
 
 name := "bwhc-query-service"
-organization in ThisBuild := "de.bwhc"
-scalaVersion in ThisBuild := "2.13.8"
-version in ThisBuild := "1.0-SNAPSHOT"
+ThisBuild / organization := "de.bwhc"
+ThisBuild / scalaVersion := "2.13.8"
+ThisBuild / version      := "1.0-SNAPSHOT"
 
 
 //-----------------------------------------------------------------------------
@@ -25,7 +25,7 @@ lazy val global = project
      impl,
      bwhc_connector,
      bwhc_broker_connector,
-     bwhc_samply_connector,
+//     bwhc_samply_connector,
      fs_mtbfile_db,
      tests
   )
@@ -88,7 +88,7 @@ lazy val bwhc_broker_connector = project
     impl
   )
 
-
+/*
 lazy val bwhc_samply_connector = project
   .settings(
     name := "bwhc-samply-connector",
@@ -103,7 +103,7 @@ lazy val bwhc_samply_connector = project
   .dependsOn(
     impl
   )
-
+*/
 
 lazy val fs_mtbfile_db = project
   .settings(

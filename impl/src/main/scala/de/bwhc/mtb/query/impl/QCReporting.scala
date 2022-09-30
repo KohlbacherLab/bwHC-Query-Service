@@ -74,7 +74,6 @@ with Logging
 
     val mtbFilesWithNGS      = mtbFiles.filter(_.ngsReports.exists(_.nonEmpty))
     val mtbFilesWithCarePlan = mtbFiles.filter(_.carePlans.exists(_.nonEmpty))
-//    val mtbFilesWithCarePlan = mtbFiles.filter(_.recommendations.exists(_.nonEmpty))
     val mtbFilesWithFU       = mtbFiles.filter(_.molecularTherapies.exists(_.nonEmpty))
 
     val completionStats =

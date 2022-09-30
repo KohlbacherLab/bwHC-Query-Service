@@ -61,16 +61,28 @@ object Config
 
   def getInstance: Config = {
 
-    // Try reading JSON config by default
+    // Try reading config from classpath by default
     Try {
       Option(getClass.getClassLoader.getResourceAsStream("bwhcConnectorConfig.xml")).get
     }
+    // else use system property for configFile path
     .recoverWith {
       case t =>
         Try { Option(System.getProperty("bwhc.connector.configFile")).get }
           .map(new FileInputStream(_))
     }
     .flatMap(Using(_)(parseXMLConfig))
+    // else use system properties for siteId and baseUrl to instantiate Config
+    .recoverWith {
+      case t => 
+        Try {
+          for {
+            siteId  <- Option(System.getProperty("bwhc.connector.config.siteId"))
+            baseUrl <- Option(System.getProperty("bwhc.connector.config.baseUrl"))
+          } yield Impl(siteId,baseUrl)
+        }
+        .map(_.get)
+    }
     .get
 
   }

@@ -117,6 +117,34 @@ trait FilteringOps
   }
 
 
+  private def toCoding(
+    implicit catalog: MedicationCatalog
+  ): Medication.Coding => Option[Coding[Medication.Code]] = {
+
+    case Medication.Coding(code,system,display,version) =>
+
+      system match {
+        case Medication.System.ATC =>
+          catalog.findWithCode(
+            code.value,
+            version.get
+          )
+          .map(
+            med =>
+              Coding(Medication.Code(med.code.value),Some(med.name))
+          )
+        case Medication.System.Unregistered =>
+          Some(
+            Coding(
+              code,
+              display.orElse(Some("N/A"))
+            )
+          )
+      }
+
+  }
+
+
   private def DefaultTherapyRecommendationFilter(
     mtbfiles: Iterable[MTBFile]
   )(
@@ -133,13 +161,7 @@ trait FilteringOps
     val medications =
       recommendations.flatMap(_.medication.getOrElse(List.empty))
         .distinctBy(_.code)
-        .flatMap(
-          coding =>
-            catalog.findWithCode(
-              coding.code.value,
-              coding.version.get
-            )
-        )
+        .flatMap(toCoding)
         .toList
 
 
@@ -166,9 +188,7 @@ trait FilteringOps
       Selection(
         "Empfohlene Medikationen",
         medications
-          .map(
-            med => Selection.Item(Coding(Medication.Code(med.code.value),Some(med.name)),true)
-          )
+          .map(coding => Selection.Item(coding,true))
       )  
     )
 
@@ -200,14 +220,7 @@ trait FilteringOps
       }
       .toList
       .distinctBy(_.code)
-      .flatMap(
-        coding =>
-          catalog.findWithCode(
-            coding.code.value,
-            coding.version.get
-//            Year.of(coding.version.get.toInt)
-          )
-      )
+      .flatMap(toCoding)
 
     val responses =
       mtbfiles.flatMap(_.responses.getOrElse(List.empty))
@@ -226,9 +239,7 @@ trait FilteringOps
       Selection(
         "Verabreichte Medikationen",
         medications
-          .map(
-            med => Selection.Item(Coding(Medication.Code(med.code.value),Some(med.name)),true)
-          )
+          .map(coding => Selection.Item(coding,true))
       ),
       Selection(
         "Response",

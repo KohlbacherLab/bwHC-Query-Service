@@ -127,11 +127,11 @@ with Logging
 
     request(None,"/sites")
       .get()
+      .map(_.body[JsValue].as[Sites])
       .andThen {
         case Failure(t) =>
           log.error(s"Broker connection error: ${t.getMessage}")
       }
-      .map(_.body[JsValue].as[Sites])
       .map(_.sites.filterNot(_.id == config.siteId))
 
   }
