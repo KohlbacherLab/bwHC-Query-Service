@@ -32,15 +32,6 @@ trait DataOps
     implicit ec: ExecutionContext
   ): Future[Iterable[Patient]]
 
-/*
-  def patient(
-    patId: Patient.Id
-  )(
-    implicit ec: ExecutionContext
-  ): Future[Option[Patient]]
-
-*/
-
   def mtbFile(
     patId: Patient.Id
   )(

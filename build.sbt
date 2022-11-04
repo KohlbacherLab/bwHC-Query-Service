@@ -25,7 +25,6 @@ lazy val global = project
      impl,
      bwhc_connector,
      bwhc_broker_connector,
-//     bwhc_samply_connector,
      fs_mtbfile_db,
      tests
   )
@@ -36,7 +35,8 @@ lazy val api = project
     name := "query-service-api",
     settings,
     libraryDependencies ++= Seq(
-      dependencies.bwhc_data_api
+      dependencies.bwhc_data_api,
+      dependencies.bwhc_data_impl
     )
   )
 
@@ -88,22 +88,6 @@ lazy val bwhc_broker_connector = project
     impl
   )
 
-/*
-lazy val bwhc_samply_connector = project
-  .settings(
-    name := "bwhc-samply-connector",
-    settings,
-    libraryDependencies ++= Seq(
-      dependencies.scalatest,
-      dependencies.play_ws_client,
-      dependencies.play_ws_json,
-      dependencies.scala_xml
-    )
-  )
-  .dependsOn(
-    impl
-  )
-*/
 
 lazy val fs_mtbfile_db = project
   .settings(
@@ -150,6 +134,7 @@ lazy val dependencies =
     val scala_xml          = "org.scala-lang.modules" %% "scala-xml"               % "2.0.0"
     val bwhc_utils         = "de.bwhc"                %% "utils"                   % "1.0-SNAPSHOT"
     val bwhc_data_api      = "de.bwhc"                %% "data-entry-service-api"  % "1.0-SNAPSHOT"
+    val bwhc_data_impl     = "de.bwhc"                %% "data-entry-service-impl" % "1.0-SNAPSHOT"
     val bwhc_dto_gens      = "de.bwhc"                %% "mtb-dto-generators"      % "1.0-SNAPSHOT"
     val hgnc_catalog_api   = "de.bwhc"                %% "hgnc-api"                % "1.0-SNAPSHOT"
     val icd_catalogs_api   = "de.bwhc"                %% "icd-catalogs-api"        % "1.0-SNAPSHOT"

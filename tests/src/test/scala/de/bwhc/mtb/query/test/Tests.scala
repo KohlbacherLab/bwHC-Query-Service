@@ -19,6 +19,7 @@ import de.bwhc.mtb.data.entry.dtos.{
   LevelOfEvidence,
   Specimen
 }
+import de.bwhc.mtb.data.entry.impl.QueryServiceProxy
 
 import de.bwhc.util.data.{Interval,ClosedInterval}
 import Interval._
@@ -67,9 +68,13 @@ class Tests extends AsyncFlatSpec
 
   }
 
+  "QueryServiceProxy SPI" must "have worked" in {
 
-  val service = serviceTry.get
+     QueryServiceProxy.getInstance.isSuccess mustBe true
+  }
 
+
+  lazy val service = serviceTry.get
 
   private val isValidQCReport: QCReport => Boolean = {
 
