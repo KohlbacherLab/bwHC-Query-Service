@@ -21,6 +21,7 @@ trait Config
 {  
   def siteId: String
   def baseURL: URL
+  def updatePeriod: Option[Long]
 }
 
 
@@ -32,7 +33,8 @@ object Config
   private case class Impl
   (
     siteId: String,
-    url: String
+    url: String,
+    updatePeriod: Option[Long]
   )
   extends Config
   {
@@ -43,19 +45,19 @@ object Config
         else
           s"$url/"
       )
+
   }
 
   
   private def parseXMLConfig(in: InputStream): Impl = {
+
     val xml = XML.load(in)
 
-    val siteId =
-      (xml \ "Site" \@ "id")
-
-    val baseURL =
-      (xml \ "Broker" \@ "baseURL")
-
-    Impl(siteId,baseURL)
+    Impl(
+      (xml \ "Site" \@ "id"),
+      (xml \ "Broker" \@ "baseURL"),
+      Option((xml \ "Update" \@ "period")).map(_.toLong)
+    )
   }
 
 
@@ -79,7 +81,9 @@ object Config
           for {
             siteId  <- Option(System.getProperty("bwhc.connector.config.siteId"))
             baseUrl <- Option(System.getProperty("bwhc.connector.config.baseUrl"))
-          } yield Impl(siteId,baseUrl)
+            period  =  Option(System.getProperty("bwhc.connector.config.update.period"))
+                         .map(_.toLong)
+          } yield Impl(siteId,baseUrl,period)
         }
         .map(_.get)
     }

@@ -56,11 +56,16 @@ The installation package comes with bwhcConnectorConfig.xml
   <!-- Base URL to DNPM-Proxy -->
   <Broker baseURL="http://localhost"/>
 
+  <!-- OPTIONAL, for periodic auto-update of site list from broker: Period (in seconds) -->
+  <!--
+  <Update period="30"/> 
+  -->
+
 </ConnectorConfig>
 ```
 to configure the connector component. 
 
-Alternatively, the two configuration parameters can be set by adding the  JVM system properties <code>bwhc.connector.config.siteId</code> and <code>bwhc.connector.config.baseUrl</code> to the application's start-up command.
+Alternatively to this XML config file, the configuration parameters can be set by adding the JVM system properties <code>bwhc.connector.config.siteId</code>, <code>bwhc.connector.config.baseUrl</code> and <code>bwhc.connector.config.update.period</code>to the application's start-up command.
 
 
 

@@ -2,7 +2,7 @@ package de.bwhc.mtb.broker.connector
 
 
 import java.net.URL
-import scala.util.Failure
+import scala.util.{Success,Failure}
 import scala.concurrent.{
   ExecutionContext,
   Future
@@ -92,15 +92,56 @@ with Logging
   private val OK = 200
 
 
+  // Set-up for periodic auto-update of peer config
 
-  // TODO: set-up for periodic auto-update of peer config
-  
-//  import java.util.concurrent.atomic.AtomicReference
-//  private val peerList: AtomicReference[List[Sites.Entry]] =
-    
+  import java.time.{Duration,LocalTime}
+  import java.util.concurrent.Executors
+  import java.util.concurrent.TimeUnit.SECONDS
+  import java.util.concurrent.atomic.AtomicReference
+
+
+  private def sitesConfig: Future[List[Sites.Entry]] = {
+
+    import ExecutionContext.Implicits.global
+
+    log.debug(s"Requesting peer connectivity config")
+
+    request("/sites")
+      .withRequestTimeout(timeout)
+      .get()
+      .map(_.body[JsValue].as[Sites])
+      .map {
+        case Sites(sites) =>
+          sites.filterNot(_.id == config.siteId)
+      }
+      .recover {
+        case t =>
+          log.error(s"Broker connection error: ${t.getMessage}")
+          List.empty[Sites.Entry]
+      }
+
+  }
+
+  private val siteList: AtomicReference[Future[List[Sites.Entry]]] =
+    new AtomicReference(sitesConfig)
+
+  private val executor =
+    Executors.newSingleThreadScheduledExecutor
+
+  for { period <- config.updatePeriod }{
+
+    executor.scheduleAtFixedRate(
+      () => siteList.set(sitesConfig),
+      period,
+      period,
+      SECONDS
+    )
+  }
+
+
   private def request(
-    virtualHost: Option[String],
-    rawUri: String
+    rawUri: String,
+    virtualHost: Option[String] = None
   ): WSRequest = {
 
     val uri =
@@ -111,29 +152,10 @@ with Logging
       wsclient.url(s"${config.baseURL}$uri")
         .withRequestTimeout(timeout)
 
-    virtualHost.fold(
-      req
-    )(
-      host => req.withHttpHeaders("Host" -> host)
-    )
-  }
-
-
-  private def peers(
-    implicit ec: ExecutionContext
-  ): Future[List[Sites.Entry]] = { 
-
-    log.debug(s"Requesting bwHC peer info")
-
-    request(None,"/sites")
-      .get()
-      .map(_.body[JsValue].as[Sites])
-      .andThen {
-        case Failure(t) =>
-          log.error(s"Broker connection error: ${t.getMessage}")
-      }
-      .map(_.sites.filterNot(_.id == config.siteId))
-
+    virtualHost match {
+      case Some(host) => req.withHttpHeaders("Host" -> host)
+      case _          => req
+    }
   }
 
 
@@ -142,14 +164,14 @@ with Logging
   )(
     implicit ec: ExecutionContext
   ): Future[List[(String,WSRequest)]] = {
-   
+    
     for {
-      sites <- peers
+      sites <- siteList.get
 
       requests =
         sites.map {
           case Sites.Entry(_,name,virtualHost) =>
-            name -> request(Some(virtualHost),uri)
+            name -> request(uri,Some(virtualHost))
         }
     } yield requests
 
@@ -166,6 +188,7 @@ with Logging
     implicit ec: ExecutionContext
   ): Future[U] =
     Future.foldLeft(responses)(acc)(f)
+
 
 
   private def scatterGather[T,U](
@@ -291,21 +314,21 @@ with Logging
     log.debug(s"Executing MTBFile Snapshot Request ${mfreq}") //TODO: Query to JSON
 
     for {
-      peerList <- peers
+      sites <- siteList.get
 
       result <-
-        peerList.find(_.name == site.value) match {
+        sites.find(_.name == site.value) match {
 
           case None =>
             Future.successful(
-              s"Invalid site name ${site.value}; should be one of [${peerList.map(_.name).mkString(", ")}]".asLeft[Option[Snapshot[MTBFile]]]
+              s"Invalid site name ${site.value}; should be one of [${sites.map(_.name).mkString(", ")}]".asLeft[Option[Snapshot[MTBFile]]]
             )
 
           case Some(Sites.Entry(id,name,virtualHost)) => {
 
             log.debug(s"Site: $name")
 
-            request(Some(virtualHost),"/bwhc/peer2peer/api/MTBFile:request")
+            request("/bwhc/peer2peer/api/MTBFile:request",Some(virtualHost))
               .post(Json.toJson(mfreq))
               .map {
                 resp =>
@@ -317,7 +340,7 @@ with Logging
               .map(_.asRight[String])
               .recover {
                 case t => 
-                  s"Error in MTBFile retrieal query from site $name: ${t.getMessage}".asLeft[Option[Snapshot[MTBFile]]]
+                  s"Error in MTBFile retrieval request from site $name: ${t.getMessage}".asLeft[Option[Snapshot[MTBFile]]]
               }
       
           }

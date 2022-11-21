@@ -5,4 +5,11 @@
 
   <Broker baseURL="http://localhost:80"/>
 
+  <!--
+    For periodic auto-update of site list from broker (Optional):
+    Period (in seconds)
+  -->
+  <!--
+  <Update period="30"/> 
+  -->
 </ConnectorConfig>
