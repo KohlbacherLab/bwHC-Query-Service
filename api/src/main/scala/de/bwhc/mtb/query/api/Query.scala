@@ -2,25 +2,19 @@ package de.bwhc.mtb.query.api
 
 
 import java.time.{Instant,YearMonth}
-
 import scala.util.Either
-
 import scala.concurrent.{
   Future,
   ExecutionContext
 }
-
 import cats.data.{
   Ior,
   IorNel,
   NonEmptyList
 }
-
 import play.api.libs.json.{Json,Format,Reads,Writes,JsObject}
-
 import de.bwhc.util.data.{Interval,ClosedInterval}
 import de.bwhc.util.json.time._
-
 import de.bwhc.mtb.data.entry.dtos.{
   Coding,
   Gender,

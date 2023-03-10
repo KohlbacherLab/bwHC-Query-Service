@@ -17,7 +17,7 @@ import de.bwhc.mtb.data.entry.dtos.{
   TherapyRecommendation,
   LevelOfEvidence,
   MolecularTherapy,
-  StartedMolecularTherapy,
+//  StartedMolecularTherapy,
   Specimen,
   SomaticNGSReport,
   Variant,
@@ -213,14 +213,19 @@ trait FilteringOps
     val recordingDates =
       therapies.map(th => YearMonth.from(th.recordedOn))
 
+/*
     val medications =
       therapies.flatMap {
         case th: StartedMolecularTherapy => th.medication.getOrElse(List.empty)
         case _                           => List.empty
       }
-      .toList
-      .distinctBy(_.code)
-      .flatMap(toCoding)
+*/
+
+    val medications =
+      therapies.flatMap(_.medication.getOrElse(List.empty))
+        .toList
+        .distinctBy(_.code)
+        .flatMap(toCoding)
 
     val responses =
       mtbfiles.flatMap(_.responses.getOrElse(List.empty))
@@ -340,13 +345,16 @@ trait FilteringOps
       
       filter.status.selectedValues.map(_.code).contains(therapy.status) &&
       filter.recordingDate.contains(YearMonth.from(therapy.recordedOn)) &&
+      therapy.medication.fold(true)(_.exists(c => selectedMedications.contains(c.code))) &&
+      response.map(_.value.code).fold(true)(responses.contains)
+/*      
       (therapy match {
         case th: StartedMolecularTherapy =>
           th.medication.fold(true)(_.exists(c => selectedMedications.contains(c.code)))
       
         case _ => true
       }) &&
-      response.map(_.value.code).fold(true)(responses.contains)
+*/      
 
   }
 

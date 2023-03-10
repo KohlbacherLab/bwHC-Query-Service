@@ -17,6 +17,7 @@ trait QueryService
 extends DataOps
    with QueryOps
    with QCReportingOps
+   with TherapyReportingOps
    with PeerToPeerOps
    with StatusOps
    with QueryServiceProxy

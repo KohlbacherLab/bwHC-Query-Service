@@ -14,10 +14,12 @@ import de.bwhc.mtb.data.entry.dtos.{
   Coding,
   TherapyRecommendation,
   MolecularTherapy,
+/*  
   NotDoneTherapy,
   StoppedTherapy,
   CompletedTherapy,
   OngoingTherapy,
+*/
   Response,
   ICD10GM,
   Variant,
@@ -179,6 +181,58 @@ trait Mappings
     val response = resp.map(_.mapTo[ResponseDisplay]).toRight(NotAvailable)
     val progressionDate = resp.filter(_.value.code == RECIST.PD).map(_.effectiveDate).toRight(Undefined)
 
+    val (medication,medicationClasses) =
+      molTh.medication
+        .map(_.mapTo[(MedicationDisplay,MedicationDisplay)]).unzip
+
+    MolecularTherapySummary(
+      molTh.id,
+      molTh.patient,
+      icd10,
+      status,
+      molTh.recordedOn,
+      molTh.basedOn,
+      priority,
+      levelOfEvidence,
+      molTh.period.map(_.mapTo[PeriodDisplay[LocalDate]]).toRight(NotAvailable),
+      molTh.notDoneReason.map(_.code).flatMap(ValueSet[MolecularTherapy.NotDoneReason.Value].displayOf).toRight(NotAvailable),
+      medication.toRight(NotAvailable),
+      medicationClasses.toRight(NotAvailable),
+      suppVariantDisplay,
+      molTh.reasonStopped.map(_.code).flatMap(ValueSet[MolecularTherapy.StopReason.Value].displayOf).toRight(NotAvailable),
+      molTh.dosage.toRight(NotAvailable),
+      note,
+      response,
+      progressionDate
+    )
+
+  }
+
+/*  
+  implicit val molecularTherapyToSummary:
+  (
+   (
+    MolecularTherapy,
+    Option[Diagnosis],
+    Option[TherapyRecommendation],
+    List[Variant],
+    Option[Response]
+   )
+  ) => MolecularTherapySummary = {
+
+    case (molTh,diag,recommendation,variants,resp) =>
+
+    val status   = ValueSet[MolecularTherapy.Status.Value].displayOf(molTh.status).get
+    val note     = molTh.note.getOrElse("-")
+    val icd10    = diag.flatMap(_.icd10).map(_.mapTo[ICD10Display]).toRight(NotAvailable)
+    val priority = recommendation.flatMap(_.priority).toRight(NotAvailable)
+    val levelOfEvidence = recommendation.flatMap(_.levelOfEvidence).map(_.grading.code).toRight(NotAvailable)
+
+    val suppVariantDisplay = variants.map(_.mapTo[SupportingVariantDisplay])
+
+    val response = resp.map(_.mapTo[ResponseDisplay]).toRight(NotAvailable)
+    val progressionDate = resp.filter(_.value.code == RECIST.PD).map(_.effectiveDate).toRight(Undefined)
+
     molTh match {
 
       case th: NotDoneTherapy =>
@@ -288,7 +342,7 @@ trait Mappings
       }
     }
   }
-
+*/
 
 
   

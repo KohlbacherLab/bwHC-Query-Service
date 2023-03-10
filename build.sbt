@@ -7,7 +7,7 @@
 name := "bwhc-query-service"
 ThisBuild / organization := "de.bwhc"
 ThisBuild / scalaVersion := "2.13.8"
-ThisBuild / version      := "1.0-SNAPSHOT"
+ThisBuild / version      := "1.1-SNAPSHOT"
 
 
 //-----------------------------------------------------------------------------
@@ -49,7 +49,11 @@ lazy val impl = project
       dependencies.scalatest,
       dependencies.hgnc_catalog_api,
       dependencies.icd_catalogs_api,
-      dependencies.med_catalog_api 
+      dependencies.med_catalog_api, 
+      dependencies.icd_catalogs_impl,
+      dependencies.med_catalog_impl, 
+      dependencies.hgnc_catalog_impl,
+      dependencies.bwhc_dto_gens % Test
     )
   )
   .dependsOn(
@@ -133,9 +137,12 @@ lazy val dependencies =
     val play_ws_json       = "com.typesafe.play"      %% "play-ws-standalone-json" % "2.1.2"
     val scala_xml          = "org.scala-lang.modules" %% "scala-xml"               % "2.0.0"
     val bwhc_utils         = "de.bwhc"                %% "utils"                   % "1.0-SNAPSHOT"
-    val bwhc_data_api      = "de.bwhc"                %% "data-entry-service-api"  % "1.0-SNAPSHOT"
-    val bwhc_data_impl     = "de.bwhc"                %% "data-entry-service-impl" % "1.0-SNAPSHOT"
-    val bwhc_dto_gens      = "de.bwhc"                %% "mtb-dto-generators"      % "1.0-SNAPSHOT"
+    val bwhc_data_api      = "de.bwhc"                %% "data-entry-service-api"  % "1.1-SNAPSHOT"
+    val bwhc_data_impl     = "de.bwhc"                %% "data-entry-service-impl" % "1.1-SNAPSHOT"
+    val bwhc_dto_gens      = "de.bwhc"                %% "mtb-dto-generators"      % "1.1-SNAPSHOT"
+//    val bwhc_data_impl     = "de.bwhc"                %% "data-entry-service-impl" % "1.0-SNAPSHOT"
+//    val bwhc_data_api      = "de.bwhc"                %% "data-entry-service-api"  % "1.0-SNAPSHOT"
+//    val bwhc_dto_gens      = "de.bwhc"                %% "mtb-dto-generators"      % "1.0-SNAPSHOT"
     val hgnc_catalog_api   = "de.bwhc"                %% "hgnc-api"                % "1.0-SNAPSHOT"
     val icd_catalogs_api   = "de.bwhc"                %% "icd-catalogs-api"        % "1.0-SNAPSHOT"
     val med_catalog_api    = "de.bwhc"                %% "medication-catalog-api"  % "1.0-SNAPSHOT"
@@ -166,10 +173,8 @@ lazy val compilerOptions = Seq(
 
 lazy val commonSettings = Seq(
   scalacOptions ++= compilerOptions,
-  resolvers ++= Seq(
-    "Local Maven Repository" at "file://" + Path.userHome.absolutePath + "/.m2/repository",
-    Resolver.sonatypeRepo("releases"),
-    Resolver.sonatypeRepo("snapshots")
-  )
+  resolvers ++= 
+    Seq("Local Maven Repository" at "file://" + Path.userHome.absolutePath + "/.m2/repository") ++
+    Resolver.sonatypeOssRepos("releases") ++
+    Resolver.sonatypeOssRepos("snapshots")
 )
-

@@ -31,6 +31,9 @@ import cats.instances.list._
 import de.bwhc.util.Logging
 import de.bwhc.util.json._
 import de.bwhc.mtb.data.entry.dtos.{
+  Coding,
+  ICD10GM,
+  Medication,
   MTBFile,
   ZPM
 }
@@ -39,12 +42,16 @@ import de.bwhc.mtb.query.api.{
   Query,
   PeerStatus,
   PeerStatusReport,
-  PeerToPeerQuery,
-  PeerToPeerMTBFileRequest,
+  PeerToPeerRequest,
+  MTBFileParameters,
+  ConceptCount,
   LocalQCReport,
-  Snapshot
+  Report,
+  LocalReport,
+  Snapshot,
+  PatientTherapies,
 }
-
+import de.bwhc.mtb.query.api.ReportingAliases._
 import de.bwhc.mtb.query.impl.{
   BwHCConnector,
   BwHCConnectorProvider
@@ -86,11 +93,12 @@ with Logging
 
   private val timeout = 10 seconds
 
-  private val BWHC_SITE_ORIGIN  = "bwhc-site-origin" 
-  private val BWHC_QUERY_USERID = "bwhc-query-userid"
+//  private val BWHC_SITE_ORIGIN  = "bwhc-site-origin" 
+//  private val BWHC_QUERY_USERID = "bwhc-query-userid"
 
   private val OK = 200
 
+  private val baseUri = "/bwhc/peer2peer/api"
 
   // Set-up for periodic auto-update of peer config
 
@@ -216,7 +224,8 @@ with Logging
 
     import PeerStatus._
 
-    scatterGather("/bwhc/peer2peer/api/status")(
+//    scatterGather("/bwhc/peer2peer/api/status")(
+    scatterGather(s"$baseUri/status")(
       (site,request) =>
         request
           .get()
@@ -241,25 +250,20 @@ with Logging
 
 
   override def requestQCReports(
-    origin: ZPM,
-    querier: Querier
+    p2pRequest: PeerToPeerRequest[Map[String,String]]
   )(
     implicit ec: ExecutionContext
   ): Future[IorNel[String,List[LocalQCReport]]] = {
 
     log.debug(
-      s"Requesting LocalQCReports from peers for Querier ${querier.value}"
+      s"Requesting LocalQCReports from peers for Querier ${p2pRequest.querier.value}"
     )
 
-    scatterGather("bwhc/peer2peer/api/LocalQCReport")(
+//    scatterGather("bwhc/peer2peer/api/LocalQCReport")(
+    scatterGather(s"$baseUri/LocalQCReport")(
       (site,request) =>
         request
-          .post(
-            Map(
-              BWHC_SITE_ORIGIN  -> origin.value,
-              BWHC_QUERY_USERID -> querier.value
-            )
-          )
+          .post(Json.toJson(p2pRequest))
           .map(_.body[JsValue].as[LocalQCReport]) //TODO: handle validation errors
           .map(_.rightIor[String].toIorNel)
           .recover {
@@ -276,15 +280,97 @@ with Logging
   }
 
 
-  override def execute(
-    q: PeerToPeerQuery
+  override def requestMedicationDistributionReports(
+    p2pRequest: PeerToPeerRequest[Report.Filters]
+  )(
+    implicit ec: ExecutionContext
+  ): Future[IorNel[String,List[LocalDistributionReport[Medication.Coding]]]] = {
+
+    log.debug(s"Executing Peer-to-Peer requests for Medication Distribution Reports")
+
+    scatterGather(s"$baseUri/medication-distribution")(
+      (site,request) =>
+        request
+          .post(Json.toJson(p2pRequest))
+          .map(_.body[JsValue].as[LocalReport[Seq[ConceptCount[Medication.Coding]]]])
+          .map(_.rightIor[String].toIorNel)
+          .recover {
+            case t =>
+              s"Error in Peer-to-peer request from bwHC Site $site: ${t.getMessage}".leftIor[LocalDistributionReport[Medication.Coding]].toIorNel
+          }
+    )(
+      List.empty[LocalDistributionReport[Medication.Coding]].rightIor[String].toIorNel
+    )(
+      _ combine _.map(List(_))
+    )
+
+  }
+
+
+  override def requestTumorEntityDistributionReports(
+    p2pRequest: PeerToPeerRequest[Report.Filters]
+  )(
+    implicit ec: ExecutionContext
+  ): Future[IorNel[String,List[LocalDistributionReport[Coding[ICD10GM]]]]] = {
+
+    log.debug(s"Executing Peer-to-Peer requests for TumorEntity Distribution Reports")
+
+    scatterGather(s"$baseUri/tumor-entity-distribution")(
+      (site,request) =>
+        request
+          .post(Json.toJson(p2pRequest))
+          .map(_.body[JsValue].as[LocalReport[Seq[ConceptCount[Coding[ICD10GM]]]]])
+          .map(_.rightIor[String].toIorNel)
+          .recover {
+            case t =>
+              s"Error in Peer-to-peer request from bwHC Site $site: ${t.getMessage}".leftIor[LocalDistributionReport[Coding[ICD10GM]]].toIorNel
+          }
+    )(
+      List.empty[LocalDistributionReport[Coding[ICD10GM]]].rightIor[String].toIorNel
+    )(
+      _ combine _.map(List(_))
+    )
+
+  }
+
+
+  override def requestPatientTherapies(
+    p2pRequest: PeerToPeerRequest[Report.Filters]
+  )(
+    implicit ec: ExecutionContext
+  ): Future[IorNel[String,List[LocalReport[Seq[PatientTherapies]]]]] = {
+
+    log.debug(s"Executing Peer-to-Peer requests for PatientTherapies")
+
+    scatterGather(s"$baseUri/patient-therapies")(
+      (site,request) =>
+        request
+          .post(Json.toJson(p2pRequest))
+          .map(_.body[JsValue].as[LocalReport[Seq[PatientTherapies]]])
+          .map(_.rightIor[String].toIorNel)
+          .recover {
+            case t =>
+              s"Error in Peer-to-peer request from bwHC Site $site: ${t.getMessage}".leftIor[LocalReport[Seq[PatientTherapies]]].toIorNel
+          }
+    )(
+      List.empty[LocalReport[Seq[PatientTherapies]]].rightIor[String].toIorNel
+    )(
+      _ combine _.map(List(_))
+    )
+
+  }
+
+
+  override def executeQuery(
+    q: PeerToPeerRequest[Query.Parameters]
   )(
     implicit ec: ExecutionContext
   ): Future[IorNel[String,List[Snapshot[MTBFile]]]] = {
 
     log.debug(s"Executing Peer-to-Peer Query ${q}") //TODO: Query to JSON
 
-    scatterGather("bwhc/peer2peer/api/query")(
+//    scatterGather("bwhc/peer2peer/api/query")(
+    scatterGather(s"$baseUri/query")(
       (site,request) =>
         request
           .post(Json.toJson(q))
@@ -304,9 +390,9 @@ with Logging
   }
 
 
-  override def execute(
+  override def requestMTBFile(
     site: ZPM,
-    mfreq: PeerToPeerMTBFileRequest
+    mfreq: PeerToPeerRequest[MTBFileParameters]
   )(
     implicit ec: ExecutionContext
   ): Future[Either[String,Option[Snapshot[MTBFile]]]] = {
@@ -328,7 +414,8 @@ with Logging
 
             log.debug(s"Site: $name")
 
-            request("/bwhc/peer2peer/api/MTBFile:request",Some(virtualHost))
+//            request("/bwhc/peer2peer/api/MTBFile:request",Some(virtualHost))
+            request(s"$baseUri/MTBFile:request",Some(virtualHost))
               .post(Json.toJson(mfreq))
               .map {
                 resp =>

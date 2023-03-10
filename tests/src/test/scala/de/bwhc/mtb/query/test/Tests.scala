@@ -3,13 +3,10 @@ package de.bwhc.mtb.query.test
 
 import java.time.LocalDateTime
 import java.nio.file.Files.createTempDirectory
-
 import scala.math.Ordering.Double.TotalOrdering
-
 import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.must.Matchers._
 import org.scalatest.OptionValues._
-
 import de.bwhc.mtb.data.entry.dtos.{
   Coding,
   ICD10GM,
@@ -20,14 +17,12 @@ import de.bwhc.mtb.data.entry.dtos.{
   Specimen
 }
 import de.bwhc.mtb.data.entry.impl.QueryServiceProxy
-
 import de.bwhc.util.data.{Interval,ClosedInterval}
 import Interval._
 import de.bwhc.mtb.query.api._
 import Query._
 import QueryOps.Command._
 import QCReport._
-
 import de.bwhc.catalogs.icd.{ICD10GMCatalogs,ICDO3Catalogs}
 
 
@@ -104,7 +99,7 @@ class Tests extends AsyncFlatSpec
 
     for {
 
-      result <- service.getLocalQCReportFor(localSite,querier)
+      result <- service.getLocalQCReport(PeerToPeerRequest(localSite,querier))
 
       qcReport = result.toOption.value
 
@@ -121,7 +116,7 @@ class Tests extends AsyncFlatSpec
 
     for {
 
-      result <- service.compileGlobalQCReport(querier)
+      result <- service.compileGlobalQCReport
 
       qcReport = result.toOption.value
 
@@ -144,6 +139,18 @@ class Tests extends AsyncFlatSpec
 
   }
 
+
+  "PatientTherapies" must "contain all Patients" in {
+
+    for {
+
+      result <- service.compileGlobalPatientTherapies(None)
+
+      data = result.toOption.value.data
+
+    } yield data.size mustBe N
+
+  }
 
 
   "Local Query results and filtering operations" must "be valid" in {
@@ -251,20 +258,9 @@ class Tests extends AsyncFlatSpec
 //        .flatMap(c => icd10s.find(_.code == c.superClass.get)).get
 
     val params =
-      Parameters(
-        diagnoses = Some(List(Coding(ICD10GM("C25"),None))),
-        None,
-        None,
-        None,
-        None,
-        None,
-        None,
-        None,
-        None
+      Parameters.empty.copy(
+        diagnoses = Some(List(Coding(ICD10GM("C25"),None)))
       )
-//      Parameters.empty.copy(
-//        diagnoses = Some(List(Coding(ICD10GM("C25"),None)))
-//      )
 
     for {
 

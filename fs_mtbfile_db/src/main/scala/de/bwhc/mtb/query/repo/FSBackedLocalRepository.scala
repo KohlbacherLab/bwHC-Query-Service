@@ -9,7 +9,6 @@ import java.io.{
 }
 import java.time.Instant
 import java.util.UUID.randomUUID
-
 import scala.util.{Failure,Success,Using}
 import scala.concurrent.{
   Future,
@@ -19,14 +18,11 @@ import scala.collection.concurrent.{
   Map,
   TrieMap
 }
-
 import play.api.libs.json.{
   Format,
   Json
 }
-
 import de.bwhc.mtb.data.entry.dtos._
-
 import de.bwhc.mtb.query.api.{
   Snapshot,
   History,
@@ -238,10 +234,13 @@ object FSBackedLocalDB
         mtbfile.molecularTherapies
           .getOrElse(List.empty)
           .flatMap(_.history.maxByOption(_.recordedOn))
+          .map(_.medication.getOrElse(List.empty).toSet)
+/*          
           .map {
             case th: StartedMolecularTherapy => th.medication.getOrElse(List.empty).toSet 
             case _                           => Set.empty[Medication.Coding]
           }
+*/          
           .map(_.map(_.code))
           .fold(Set.empty[Medication.Code])(_ ++ _)
 

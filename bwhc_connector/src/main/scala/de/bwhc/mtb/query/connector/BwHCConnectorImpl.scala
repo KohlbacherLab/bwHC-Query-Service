@@ -1,7 +1,6 @@
 package de.bwhc.mtb.query.connector
 
 
-
 import java.net.URL
 import scala.concurrent.{
   ExecutionContext,
@@ -30,6 +29,9 @@ import cats.syntax.either._
 import cats.instances.list._
 import de.bwhc.util.Logging
 import de.bwhc.mtb.data.entry.dtos.{
+  Coding,
+  ICD10GM,
+  Medication,
   MTBFile,
   ZPM
 }
@@ -38,11 +40,17 @@ import de.bwhc.mtb.query.api.{
   Query,
   PeerStatus,
   PeerStatusReport,
-  PeerToPeerQuery,
-  PeerToPeerMTBFileRequest,
+  PeerToPeerRequest,
+//  Naught,
+  MTBFileParameters,
   LocalQCReport,
+  ConceptCount,
+  LocalReport,
+  Report,
+  PatientTherapies,
   Snapshot
 }
+import de.bwhc.mtb.query.api.ReportingAliases._
 import de.bwhc.mtb.query.impl.{
   BwHCConnector,
   BwHCConnectorProvider
@@ -85,8 +93,8 @@ with Logging
 
   private val timeout = 10 seconds
 
-  private val BWHC_SITE_ORIGIN  = "bwhc-site-origin" 
-  private val BWHC_QUERY_USERID = "bwhc-query-userid"
+//  private val BWHC_SITE_ORIGIN  = "bwhc-site-origin" 
+//  private val BWHC_QUERY_USERID = "bwhc-query-userid"
 
   private val OK = 200
 
@@ -183,24 +191,19 @@ with Logging
 
 
   override def requestQCReports(
-    origin: ZPM,
-    querier: Querier
+//    p2pRequest: PeerToPeerRequest[Naught]
+    p2pRequest: PeerToPeerRequest[Map[String,String]]
   )(
     implicit ec: ExecutionContext
   ): Future[IorNel[String,List[LocalQCReport]]] = {
 
-    log.debug(s"Requesting LocalQCReports from peers for Querier ${querier.value}")
+    log.debug(s"Requesting LocalQCReports from peers for Querier ${p2pRequest.querier.value}")
 
     scatterGather("LocalQCReport")(
       (site,request) =>
         request
-          .post(
-            Map(
-              BWHC_SITE_ORIGIN  -> origin.value,
-              BWHC_QUERY_USERID -> querier.value
-            )
-          )
-          .map(_.body[JsValue].as[LocalQCReport]) //TODO: handle validation errors
+          .post(Json.toJson(p2pRequest))
+          .map(_.body[JsValue].as[LocalQCReport])
           .map(_.rightIor[String].toIorNel)
           .recover {
             case t => 
@@ -216,8 +219,90 @@ with Logging
   }
 
 
-  override def execute(
-    q: PeerToPeerQuery
+  override def requestMedicationDistributionReports(
+    p2pRequest: PeerToPeerRequest[Report.Filters]
+  )(
+    implicit ec: ExecutionContext
+  ): Future[IorNel[String,List[LocalDistributionReport[Medication.Coding]]]] = {
+
+    log.debug(s"Executing Peer-to-Peer requests for Medication Distribution Reports")
+
+    scatterGather("medication-distribution")(
+      (site,request) =>
+        request
+          .post(Json.toJson(p2pRequest))
+          .map(_.body[JsValue].as[LocalReport[Seq[ConceptCount[Medication.Coding]]]])
+          .map(_.rightIor[String].toIorNel)
+          .recover {
+            case t => 
+              s"Error in Peer-to-peer request from bwHC Site ${site.value}: ${t.getMessage}".leftIor[LocalDistributionReport[Medication.Coding]].toIorNel
+          }
+    )(
+      List.empty[LocalDistributionReport[Medication.Coding]].rightIor[String].toIorNel
+    )(
+      _ combine _.map(List(_))
+    )
+
+  }
+
+
+  override def requestTumorEntityDistributionReports(
+    p2pRequest: PeerToPeerRequest[Report.Filters]
+  )(
+    implicit ec: ExecutionContext
+  ): Future[IorNel[String,List[LocalDistributionReport[Coding[ICD10GM]]]]] = {
+
+    log.debug(s"Executing Peer-to-Peer requests for TumorEntity Distribution Reports")
+
+    scatterGather("tumor-entity-distribution")(
+      (site,request) =>
+        request
+          .post(Json.toJson(p2pRequest))
+          .map(_.body[JsValue].as[LocalReport[Seq[ConceptCount[Coding[ICD10GM]]]]])
+          .map(_.rightIor[String].toIorNel)
+          .recover {
+            case t => 
+              s"Error in Peer-to-peer request from bwHC Site ${site.value}: ${t.getMessage}".leftIor[LocalDistributionReport[Coding[ICD10GM]]].toIorNel
+          }
+    )(
+      List.empty[LocalDistributionReport[Coding[ICD10GM]]].rightIor[String].toIorNel
+    )(
+      _ combine _.map(List(_))
+    )
+
+  }
+
+
+  override def requestPatientTherapies(
+    p2pRequest: PeerToPeerRequest[Report.Filters]
+  )(
+    implicit ec: ExecutionContext
+  ): Future[IorNel[String,List[LocalReport[Seq[PatientTherapies]]]]] = {
+
+    log.debug(s"Executing Peer-to-Peer requests for PatientTherapies")
+
+    scatterGather("patient-therapies")(
+      (site,request) =>
+        request
+          .post(Json.toJson(p2pRequest))
+          .map(_.body[JsValue].as[LocalReport[Seq[PatientTherapies]]])
+          .map(_.rightIor[String].toIorNel)
+          .recover {
+            case t => 
+              s"Error in Peer-to-peer request from bwHC Site ${site.value}: ${t.getMessage}".leftIor[LocalReport[Seq[PatientTherapies]]].toIorNel
+          }
+    )(
+      List.empty[LocalReport[Seq[PatientTherapies]]].rightIor[String].toIorNel
+    )(
+      _ combine _.map(List(_))
+    )
+
+  }
+
+
+
+  override def executeQuery(
+    q: PeerToPeerRequest[Query.Parameters]
   )(
     implicit ec: ExecutionContext
   ): Future[IorNel[String,List[Snapshot[MTBFile]]]] = {
@@ -243,9 +328,9 @@ with Logging
 
   }
 
-  override def execute(
+  override def requestMTBFile(
     site: ZPM,
-    mfreq: PeerToPeerMTBFileRequest
+    mfreq: PeerToPeerRequest[MTBFileParameters]
   )(
     implicit ec: ExecutionContext
   ): Future[Either[String,Option[Snapshot[MTBFile]]]] = {

@@ -9,7 +9,6 @@ import de.bwhc.util.data.Validation.dsl._
 import de.bwhc.catalogs.icd.{ICD10GMCatalogs,ICDO3Catalogs}
 import de.bwhc.catalogs.hgnc.{HGNCGene,HGNCCatalog,HGNCId}
 import de.bwhc.catalogs.med.MedicationCatalog
-
 import de.bwhc.mtb.data.entry.dtos.{
   Coding,
   ICDO3M,
@@ -21,6 +20,7 @@ import de.bwhc.mtb.data.entry.dtos.{
   ValueSets,
 }
 import de.bwhc.mtb.query.api.Query._
+import de.bwhc.mtb.query.api.Report
 
 
 /*
@@ -167,7 +167,53 @@ object ParameterValidation extends Validator[String,Parameters]
   }
 
 
-  implicit val medicationCodeValidator: Validator[String,MedicationWithUsage] = {
+  implicit val medicationCodingValidator: Validator[String,Medication.Coding] = {
+
+    case coding @ Medication.Coding(Medication.Code(code),_,_,version) =>
+
+      version mustBe defined otherwise (
+        "Missing ATC version: Required for code resultion"
+      ) map (_.get) andThen {
+        v =>
+          val versions = atc.availableVersions.map(_.toString)
+
+          v must be (in (versions)) otherwise (
+          s"Invalid ATC Version '$v: Must be in {${versions.reduceLeft(_ + ", " + _)}}"
+        )
+      } andThen (
+        v =>
+          atc.findWithCode(code,v) mustBe defined otherwise (
+            s"Invalid ATC medication code '$code'"
+          ) map (
+            atcEntry =>
+              coding.copy(
+                display = Some(atcEntry.get.name) // get safe here
+              )
+          )
+      )
+  }
+
+  implicit val reportFiltersValidator: Validator[String,Report.Filters] = {
+
+    case filters @ Report.Filters(optMedication) =>
+
+      import cats.syntax.validated._
+
+      optMedication match {
+        case None =>
+          filters.validNel[String]
+
+        case Some(medication) =>
+          validate(medication)
+            .map(
+              med => filters.copy(medication = Some(med))
+            )
+      }
+  }
+
+
+
+  implicit val medicationUsageValidator: Validator[String,MedicationWithUsage] = {
 
     case mwu @ MedicationWithUsage(medication,usageSet) =>
 
@@ -190,6 +236,8 @@ object ParameterValidation extends Validator[String,Parameters]
           )
       )
   }
+
+
 
   implicit val snvParametersValidator: Validator[String,SNVParameters] = {
     params =>

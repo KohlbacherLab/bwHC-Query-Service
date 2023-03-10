@@ -2,7 +2,7 @@ package de.bwhc.mtb.query.impl
 
 
 
-import java.time.{Instant,YearMonth}
+import java.time.{Instant,YearMonth,LocalDateTime}
 import scala.util.{Either,Success}
 import scala.concurrent.{
   Future,
@@ -24,6 +24,7 @@ import cats.instances.list._
 import de.bwhc.util.Logging
 import de.bwhc.util.data.ClosedInterval
 import de.bwhc.mtb.query.api._
+import de.bwhc.mtb.query.api.ReportingAliases._
 import de.bwhc.mtb.data.entry.dtos.{
   MTBFile,
   Patient,
@@ -34,7 +35,6 @@ import de.bwhc.mtb.data.entry.dtos.{
   TherapyRecommendation,
   LevelOfEvidence,
   MolecularTherapy,
-  StartedMolecularTherapy,
   Specimen,
   SomaticNGSReport,
   Variant,
@@ -49,6 +49,7 @@ import de.bwhc.mtb.data.entry.views.{
   TherapyRecommendationView,
 }
 import de.bwhc.catalogs.med.MedicationCatalog
+import de.bwhc.catalogs.icd.ICD10GMCatalogs
 import cats.data.Validated.{
   Valid, Invalid, validNel
 }
@@ -82,6 +83,9 @@ object QueryServiceImpl
   implicit val medicationCatalog =
     MedicationCatalog.getInstance.get
 
+  implicit val icd10Catalogs =
+    ICD10GMCatalogs.getInstance.get
+
 
   val instance =
     new QueryServiceImpl(
@@ -112,7 +116,8 @@ class QueryServiceImpl
   private val bwHC: BwHCConnector,
   private val queryCache: QueryCache
 )(
-  implicit val medicationCatalog: MedicationCatalog
+  implicit val medicationCatalog: MedicationCatalog,
+  implicit val icd10Catalogs: ICD10GMCatalogs
 )
 extends QueryService
 with Logging
@@ -251,13 +256,15 @@ with FilteringOps
         origin match {
     
           case Some(site) if (site != localSite) =>
-            bwHC.execute(
+            bwHC.requestMTBFile(
               site,
-              PeerToPeerMTBFileRequest(
+              PeerToPeerRequest(
                 localSite,
-                querier, 
-                patId,
-                snpId
+                querier,
+                MTBFileParameters(
+                  patId,
+                  snpId
+                )
               )
             )
     
@@ -276,14 +283,15 @@ with FilteringOps
   // QCReporting operations
   //---------------------------------------------------------------------------
 
-  override def getLocalQCReportFor(
-    site: ZPM,
-    querier: Querier
+  override def getLocalQCReport(
+    request: PeerToPeerRequest[Map[String,String]]
   )(
     implicit ec: ExecutionContext
   ): Future[Either[String,LocalQCReport]] = {
 
-    log.info(s"Processing request for LocalQCReport by Querier ${querier.value} from ZPM ${site.value}")
+    log.info(
+      s"Processing request for LocalQCReport by Querier ${request.querier.value} from ZPM ${request.origin.value}"
+    )
 
     val result =
       for {
@@ -300,18 +308,20 @@ with FilteringOps
 
 
   override def compileGlobalQCReport(
-    querier: Querier
-  )(
-    implicit ec: ExecutionContext
+    implicit
+    querier: Querier,
+    ec: ExecutionContext
   ): Future[IorNel[String,GlobalQCReport]] = {
 
     log.info(s"Processing request for GlobalQCReport by Querier ${querier.value}")
 
+    val request = PeerToPeerRequest(localSite,querier)
+
     val extReports =
-      bwHC.requestQCReports(localSite,querier)
+      bwHC.requestQCReports(request)
 
     val localReport =
-      getLocalQCReportFor(localSite,querier)
+      getLocalQCReport(request)
         .map(Ior.fromEither)
         .map(_.map(List(_)))
         .map(_.toIorNel)
@@ -322,6 +332,238 @@ with FilteringOps
 
   }
 
+
+  //---------------------------------------------------------------------------
+  // Therapy Reporting operations
+  //---------------------------------------------------------------------------
+ 
+  import TherapyReportingOperations._
+
+
+  override def compileLocalMedicationDistributionFor(
+    request: PeerToPeerRequest[Report.Filters] 
+  )(
+    implicit
+    ec: ExecutionContext
+  ): Future[Either[NonEmptyList[String],LocalDistributionReport[Medication.Coding]]] = {
+
+    val PeerToPeerRequest(origin,querier,_,_) = request
+
+    log.info(s"Compiling Local Medication Distribution Report for Querier: ${querier.value}, Origin: ${origin.value}")
+
+    db.latestSnapshots
+      .map(
+        snapshots =>
+          toLocalMedicationDistributionReport(
+            localSite,
+            snapshots.map(_.data)
+          )
+          .rightNel[String]
+      )
+      .recover {
+        case t =>
+          t.getMessage.leftNel[LocalDistributionReport[Medication.Coding]]
+      }  
+  }
+
+
+  override def compileGlobalMedicationDistribution(
+    implicit
+    querier: Querier,
+    ec: ExecutionContext
+  ): Future[IorNel[String,GlobalDistributionReport[Medication.Coding]]] = {
+    
+    import DistributionReportOperations._
+
+    log.info(s"Compiling Global Medication Distribution Report for Querier: ${querier.value}")
+
+    val request =
+      PeerToPeerRequest(localSite,querier,Report.Filters.empty)
+
+    val externalReports =
+      bwHC.requestMedicationDistributionReports(request)
+
+    val localReport =
+      compileLocalMedicationDistributionFor(request)
+
+    (
+      localReport, 
+      externalReports
+    )
+    .mapN(_.map(List(_)).toIor combine _) // Put localReport result into a List within an IorNel, to use 'IorNel.combine'
+    .map(
+      _.map(_.combineToGlobalReport)
+    )
+
+  }
+
+
+  override def compileLocalTumorEntityDistributionFor(
+    request: PeerToPeerRequest[Report.Filters] 
+  )(
+    implicit
+    ec: ExecutionContext
+  ): Future[Either[NonEmptyList[String],LocalDistributionReport[Coding[ICD10GM]]]] = {
+
+    val medication = request.body.medication
+
+    log.info(
+      s"""Compiling Local Tumor Entity Distribution Report for Querier: ${request.querier.value}, Origin: ${request.origin.value}.
+      Medication filter: ${medication.map(_.code.value).getOrElse("-")}"""
+    )
+    
+    db.latestSnapshots
+      .map(
+        snapshots =>
+          toLocalTumorEntityDistributionReport(
+            localSite,
+            snapshots.map(_.data)
+          )(
+            request.body
+          )
+          .rightNel[String]
+      )
+      .recover {
+        case t =>
+          t.getMessage.leftNel[LocalDistributionReport[Coding[ICD10GM]]]
+      }  
+
+  }
+
+  override def compileGlobalTumorEntityDistribution(
+    medication: Option[Medication.Coding]
+  )(
+    implicit
+    querier: Querier,
+    ec: ExecutionContext
+  ): Future[IorNel[String,GlobalDistributionReport[Coding[ICD10GM]]]] = {
+    
+    import DistributionReportOperations._
+    import ParameterValidation.medicationCodingValidator
+    import de.bwhc.util.data.Validation._
+
+
+    log.info(
+s"""Compiling Global Tumor Entity Distribution Report for Querier: ${querier.value}.
+Medication filter: ${medication.map(_.code.value).getOrElse("-")}"""
+    )
+
+    ifDefined(medication){validate(_)} match {
+
+      case Invalid(err) =>
+        Future.successful(err.leftIor[GlobalDistributionReport[Coding[ICD10GM]]])
+
+      case Valid(_) =>
+
+        val request =
+          PeerToPeerRequest(localSite,querier,Report.Filters(medication))
+        
+        val externalReports =
+          bwHC.requestTumorEntityDistributionReports(request)
+        
+        val localReport =
+          compileLocalTumorEntityDistributionFor(request)
+        
+        (
+          localReport, 
+          externalReports
+        )
+        .mapN(_.map(List(_)).toIor combine _) // Put localReport result into a List within an IorNel, to use 'IorNel.combine'
+        .map(
+          _.map(_.combineToGlobalReport)
+        )
+
+    }
+
+  }
+
+
+  override def compilePatientTherapies(
+    request: PeerToPeerRequest[Report.Filters] 
+  )(
+    implicit
+    ec: ExecutionContext
+  ): Future[Either[NonEmptyList[String],LocalReport[Seq[PatientTherapies]]]] = {
+
+    val parameters =
+      Query.Parameters.empty.copy(
+        medicationsWithUsage =
+          request.body.medication.map(
+           coding =>
+             Query.MedicationWithUsage(
+               Coding(
+                 coding.code,
+                 None
+               ),
+               Set(Coding(Query.DrugUsage.Used))
+             )
+          )
+          .map(List(_))
+      )
+
+//   db.latestSnapshots
+    db.findMatching(parameters)       
+      .map(_.map(_.data))
+      .map(toPatientTherapies(localSite,_)(request.body))
+      .map(_.rightNel[String])
+      .recover {
+        case t => t.getMessage.leftNel[LocalReport[Seq[PatientTherapies]]]
+      }
+  }
+
+  override def compileGlobalPatientTherapies(
+    medication: Option[Medication.Coding]
+  )(
+    implicit
+    querier: Querier,
+    ec: ExecutionContext
+  ): Future[IorNel[String,GlobalReport[Seq[PatientTherapies]]]] = {
+
+    import DistributionReportOperations._
+    import ParameterValidation.medicationCodingValidator
+    import de.bwhc.util.data.Validation._
+
+
+    log.info(
+      s"""Compiling Patient Therapy data for Querier: ${querier.value}.
+      Medication filter: ${medication.map(_.code.value).getOrElse("-")}"""
+    )
+
+    ifDefined(medication){validate(_)} match {
+
+      case Invalid(err) =>
+        Future.successful(err.leftIor[GlobalReport[Seq[PatientTherapies]]])
+
+      case Valid(_) =>
+
+        val request =
+           PeerToPeerRequest(localSite,querier,Report.Filters(medication))
+        
+        val externalData =
+          bwHC.requestPatientTherapies(request)
+        
+        val localData =
+          compilePatientTherapies(request)
+        
+        (
+          localData,
+          externalData
+        )
+        .mapN(_.toIor.map(List(_)) combine _) // Put local data into a List within an IorNel, to use 'IorNel.combine'
+        .map(
+          _.map(
+            parts =>
+              GlobalReport(
+                LocalDateTime.now,
+                parts.map(_.site).toList,
+                request.body,
+                parts.flatMap(_.data),
+                None
+              )
+          )
+        )
+    }
+  }
 
 
   //---------------------------------------------------------------------------
@@ -556,7 +798,7 @@ with FilteringOps
 
     val externalResults =
       if (mode == Query.Mode.Federated)
-        bwHC execute PeerToPeerQuery(id,localSite,querier,params) andThen {
+        bwHC.executeQuery(PeerToPeerRequest(localSite,querier,params)) andThen {
           case Success(ior) => {
             ior match {
 
@@ -605,26 +847,6 @@ with FilteringOps
     Future.successful(queryCache get query)
   }
 
-/*
-  override def resultSummaryOf(
-    query: Query.Id,
-  )(
-    implicit ec: ExecutionContext
-  ): Future[Option[ResultSummary]] = {
-    Future {
-      for {
-        mtbFiles <- queryCache.resultsOf(query)
-        qc       =  QCReporting.toLocalQCReport(localSite,mtbFiles)
-      } yield {
-        ResultSummary(
-          query,
-          qc.patientTotal,
-          qc.completionStats 
-        )
-      }   
-    }   
-  }
-*/
 
   override def resultSummaryOf(
     query: Query.Id,
@@ -907,33 +1129,34 @@ with FilteringOps
   //---------------------------------------------------------------------------
 
   override def resultsOf(
-    query: PeerToPeerQuery
+    query: PeerToPeerRequest[Query.Parameters]
   )(
     implicit ec: ExecutionContext
   ): Future[Iterable[Snapshot[MTBFile]]] = {
 
-    log.info(s"Processing external peer-to-peer MTBFile Query ${query.id.value} from ${query.origin} \nQuery: \n${formattedJson(query)}") 
+    log.info(s"Processing external peer-to-peer MTBFile Query from ${query.origin} \nQuery: \n${formattedJson(query)}") 
 
-    db.findMatching(ParameterProcessor(query.parameters)) andThen {
+    db.findMatching(ParameterProcessor(query.body)) andThen {
       case Success(snps) => {
         val resultIds =
           snps.map(snp => ResultIds(snp.data.patient.id,snp.id))
 
-        log.info(s"ResultSet returned for external peer-to-peer MTBFile Query ${query.id.value}:\n${formattedJson(resultIds)}")
+        log.info(s"ResultSet returned for external peer-to-peer MTBFile Query:\n${formattedJson(resultIds)}")
       }
     }
 
   }
 
   override def process(
-    req: PeerToPeerMTBFileRequest
+//    req: PeerToPeerMTBFileRequest
+    req: PeerToPeerRequest[MTBFileParameters]
   )(
     implicit ec: ExecutionContext
   ): Future[Option[Snapshot[MTBFile]]] = {
 
     log.info(s"Processing external MTBFile Snapshot request: \n${formattedJson(req)}") 
 
-    db.snapshot(req.patId,req.snpId)
+    db.snapshot(req.body.patId,req.body.snpId)
 
   }
 
