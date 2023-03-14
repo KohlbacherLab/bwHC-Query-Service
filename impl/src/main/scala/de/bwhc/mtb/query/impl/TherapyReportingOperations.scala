@@ -8,7 +8,6 @@ import de.bwhc.mtb.data.entry.dtos.{
   ICD10GM,
   Medication,
   MolecularTherapy,
-//  StartedMolecularTherapy,
   MTBFile,
   ZPM
 }
@@ -122,26 +121,26 @@ trait TherapyReportingOperations
     catalogs: ATCCatalog
   ): (Medication.Coding,Medication.Coding) = {
 
-    val medication =
+    val atcEntry =
       catalogs.findWithCode(
         coding.code.value,
         coding.version.get  // Safe: ensured defined by data validation
       )
       .get
          
-    val group =
-      medication.parent match {
+    val atcClass =
+      atcEntry.parent match {
         case Some(code) =>
-          catalogs.find(code,medication.version)
+          catalogs.find(code,atcEntry.version)
             .get   // Safe
         case None =>
-          medication
+          atcEntry
       }
 
-    (toCoding(group) -> toCoding(medication))
+    (toCoding(atcClass) -> toCoding(atcEntry))
   }
 
-
+/*
   def toLocalMedicationDistributionReport(
     site: ZPM,
     mtbfiles: Iterable[MTBFile]
@@ -166,12 +165,7 @@ trait TherapyReportingOperations
  
           for {
             med <- therapy.medication.getOrElse(List.empty)
-/*
-              therapy match {
-                case th: StartedMolecularTherapy => th.medication.getOrElse(List.empty)
-                case _                           => List.empty
-              }
-*/
+
             if med.system == Medication.System.ATC
  
             (group,medication) = resolveWithParent(med)
@@ -226,9 +220,86 @@ trait TherapyReportingOperations
     )
 
   }
+*/
 
+  private val ATCVersionOrder =
+    Ordering.by((v: String) => v.toInt)
 
+  def toLocalMedicationDistributionReport(
+    site: ZPM,
+    mtbfiles: Iterable[MTBFile]
+  )(
+    implicit 
+    atcCatalogs: ATCCatalog
+  ): LocalDistributionReport[Medication.Coding] = {
 
+    import scala.collection.mutable.Map
+
+    val conceptCounts =
+      mtbfiles.flatMap(
+        _.molecularTherapies
+         .getOrElse(List.empty)
+         .map(_.history.maxBy(_.recordedOn))
+         .flatMap(
+           _.medication
+            .getOrElse(List.empty)
+            .filter(_.system == Medication.System.ATC)
+         )
+      )
+      .groupBy(_.code)
+      .values
+      .map {
+        meds =>
+
+          // Treat medication codings with same code but different version
+          // as being conceptually continuous across subsequent versions,
+          // i.e. being the same entry at the version maximum (i.e. latest version),
+          // to avoid seeming duplication by having
+          // e.g. medication (code,2020), (code,2021), (code,2022) 
+          // in different "bins", and instead count them as all being (code,2022)
+          val maxByVersion =
+            meds.maxBy(_.version.getOrElse(atcCatalogs.latestVersion))(ATCVersionOrder)
+
+          val (medicationClass,medication) =
+            resolveWithParent(maxByVersion)
+
+          (medicationClass -> (medication,meds.size))
+//          (medicationClass -> (maxByVersion,meds.size))
+      }
+      // group by medication class, mapping the values to medications with their occurrence
+      .groupMap(_._1)(_._2)
+      .map {
+        case (medicationClass,medicationsWithCount) =>
+          ConceptCount(
+            medicationClass,
+            medicationsWithCount.map(_._2).sum,
+            Some(
+              medicationsWithCount.map {
+                case (medication,n) =>
+                  ConceptCount(
+                    medication,
+                    n,
+                    None
+                  )
+              }
+              .toSeq
+              .sortWith(_.count > _.count)
+            )
+          )
+      }
+      .toSeq
+      .sortWith(_.count > _.count)
+
+    LocalReport[Distribution[Medication.Coding]](
+      LocalDateTime.now,
+      site,
+      Report.Filters.empty,
+      conceptCounts
+    )
+
+  }
+
+/*
   private def resolveWithSuperCategory(
     coding: Coding[ICD10GM]
   )(
@@ -246,7 +317,7 @@ trait TherapyReportingOperations
     category.superClass.getOrElse(category.code) -> category.code
   }
 
-  private def resolveAsCoding(
+  private def toCoding(
     code: ICD10.Code
   )(
     implicit
@@ -262,6 +333,43 @@ trait TherapyReportingOperations
         )
       )
       .get // safe
+
+*/
+
+  private def resolveWithSuperClass(
+    coding: Coding[ICD10GM]
+  )(
+    implicit
+    catalogs: ICD10GMCatalogs
+  ): (Coding[ICD10GM],Coding[ICD10GM]) = {
+
+    def toCoding(
+      code: ICD10.Code
+    )(
+      implicit
+      catalogs: ICD10GMCatalogs
+    ): Coding[ICD10GM] = {
+      catalogs.coding(code)
+        .map(
+          concept =>
+            Coding(
+            ICD10GM(concept.code.value),
+            Some(concept.display),
+            None // erase version as all codes are combined
+          )
+        )
+        .get // safe
+    }    
+          
+    val category =
+      catalogs.coding(
+        ICD10.Code(coding.code.value),
+        coding.version.get  // Safe: ensured defined by data validation
+      )
+      .get
+
+    toCoding(category.superClass.getOrElse(category.code)) -> toCoding(category.code)
+  }
 
 
 
@@ -304,7 +412,110 @@ trait TherapyReportingOperations
      .get
 
 
+  private val ICD10VersionOrder =
+    Ordering.by((v: String) => v.toInt)
 
+  def toLocalTumorEntityDistributionReport(
+    site: ZPM,
+    mtbfiles: Iterable[MTBFile]
+  )(
+    filters: Report.Filters
+  )(
+    implicit 
+    atcCatalogs: ATCCatalog,
+    icd10catalogs: ICD10GMCatalogs
+  ): LocalDistributionReport[Coding[ICD10GM]] = {
+
+    import scala.collection.mutable.Map
+
+    val medicationCodeFilter =
+      filters.medication.map(expandToCodeset)
+ 
+    val diagnoses =
+      medicationCodeFilter match {
+
+        // If medication codes are defined as filter,
+        // pick only diagnoses (tumor entities) for which
+        // a therapy with the given medication codes exists
+        case Some(codes) => {
+           mtbfiles.flatMap(
+             mtbfile =>
+               mtbfile.molecularTherapies
+                .getOrElse(List.empty)
+                .map(_.history.maxBy(_.recordedOn))
+                // retain only therapies in which the given medication was used
+                .withFilter {
+                  _.medication match {
+                    case Some(meds) => meds.exists(med => codes.contains(med.code))
+                    case None => false
+                  }
+                }
+                // Resolve diagnoses the therapy was an indication for
+                .flatMap(
+                  therapy =>
+                    mtbfile.recommendations
+                      .flatMap(_.find(_.id == therapy.basedOn))
+                      .flatMap(rec => mtbfile.diagnoses.flatMap(_.find(_.id == rec.diagnosis)))
+                )
+           )
+        }
+
+        // Else use all diagnoses (tumor entities)
+        case None =>
+          mtbfiles.flatMap(_.diagnoses.getOrElse(List.empty))
+      }
+
+    val conceptCounts =
+      diagnoses
+        .flatMap(_.icd10)
+        .groupBy(_.code)
+        .values
+        .map {
+          codings =>
+            val maxByVersion =
+              codings.maxBy(_.version.getOrElse(icd10catalogs.latestVersion))(ICD10VersionOrder)
+
+            val (superClass,category) =
+              resolveWithSuperClass(maxByVersion)
+
+            superClass -> (category -> codings.size)
+        }
+        // group by ICD10 superclass, mapping the values to ICD categories with their occurrence
+        .groupMap(_._1)(_._2)
+        .map {
+          case (superClass,categoriesWithCount) =>
+            ConceptCount(
+              superClass,
+              categoriesWithCount.map(_._2).sum,
+              Some(
+                categoriesWithCount.map {
+                  case (category,n) =>
+                    ConceptCount(
+                      category,
+                      n,
+                      None
+                    )
+                }
+                .toSeq
+                .sortWith(_.count > _.count)
+              )
+            )
+        }
+        .toSeq
+        .sortWith(_.count > _.count)
+
+    LocalReport[Distribution[Coding[ICD10GM]]](
+      LocalDateTime.now,
+      site,
+      filters.copy(
+        medication = filters.medication.flatMap(resolve)
+      ),
+      conceptCounts
+    )
+
+  }
+
+/*
   def toLocalTumorEntityDistributionReport(
     site: ZPM,
     mtbfiles: Iterable[MTBFile]
@@ -339,14 +550,6 @@ trait TherapyReportingOperations
                     case Some(meds) => meds.exists(med => codes.contains(med.code))
                     case None => false
                   }
-/*                  
-                  case th: StartedMolecularTherapy =>
-                    th.medication
-                      .getOrElse(List.empty)
-                      .exists(med => codes.contains(med.code))
-           
-                  case _ => false
-*/                  
                 }
                 // Resolve diagnoses the therapy was an indication for
                 .flatMap(
@@ -438,6 +641,7 @@ trait TherapyReportingOperations
     )
 
   }
+*/
 
 
   def toPatientTherapies(
@@ -461,17 +665,6 @@ trait TherapyReportingOperations
               case Some(meds) => meds.exists(med => codes.contains(med.code))
               case None => false
             }
-/*          
-          codes => {
-            case th: StartedMolecularTherapy =>
-               // retain only therapies in which the given medication was used
-               th.medication
-                 .getOrElse(List.empty)
-                 .exists(med => codes contains med.code)
-        
-            case _ => false
-          }
-*/          
         )
         .getOrElse(th => true)
 
@@ -508,7 +701,7 @@ trait TherapyReportingOperations
 
                       supportingVariants = 
                         ngsReport.variants
-                          .filter(v => recommendation.supportingVariants.exists(_ contains v.id))
+                          .withFilter(variant => recommendation.supportingVariants.exists(_ contains variant.id))
 
                     } yield {
                       supportingVariants.map(supportingVariantToDisplay)
@@ -530,5 +723,3 @@ trait TherapyReportingOperations
 
 
 object TherapyReportingOperations extends TherapyReportingOperations
-
-

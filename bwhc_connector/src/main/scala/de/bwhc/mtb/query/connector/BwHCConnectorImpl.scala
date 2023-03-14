@@ -93,9 +93,6 @@ with Logging
 
   private val timeout = 10 seconds
 
-//  private val BWHC_SITE_ORIGIN  = "bwhc-site-origin" 
-//  private val BWHC_QUERY_USERID = "bwhc-query-userid"
-
   private val OK = 200
 
 

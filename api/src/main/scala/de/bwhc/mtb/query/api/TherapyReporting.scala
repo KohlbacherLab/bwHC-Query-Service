@@ -44,6 +44,7 @@ object ConceptCount
       unlift(ConceptCount.unapply)
     )
 
+  // Order ConceptCounts by decreasing number of occurrence
   implicit def ordering[T] =
     Ordering[Int]
       .on[ConceptCount[T]](_.count)
@@ -85,6 +86,20 @@ object Report
       Json.format[Filters]
   }
 
+/*
+  implicit def format[T] =
+    Format[Report[T]](
+      Reads(
+        js =>
+          js.validate[LocalReport[T]]
+            .orElse(js.validate[GlobalReport[T]])
+      ),
+      Writes { 
+        case r: LocalReport[T] => Json.toJson(r)
+        case r: LocalReport[T] => Json.toJson(r)
+      }
+    )
+*/
 }
 
 

@@ -93,9 +93,6 @@ with Logging
 
   private val timeout = 10 seconds
 
-//  private val BWHC_SITE_ORIGIN  = "bwhc-site-origin" 
-//  private val BWHC_QUERY_USERID = "bwhc-query-userid"
-
   private val OK = 200
 
   private val baseUri = "/bwhc/peer2peer/api"
@@ -224,7 +221,6 @@ with Logging
 
     import PeerStatus._
 
-//    scatterGather("/bwhc/peer2peer/api/status")(
     scatterGather(s"$baseUri/status")(
       (site,request) =>
         request
@@ -259,7 +255,6 @@ with Logging
       s"Requesting LocalQCReports from peers for Querier ${p2pRequest.querier.value}"
     )
 
-//    scatterGather("bwhc/peer2peer/api/LocalQCReport")(
     scatterGather(s"$baseUri/LocalQCReport")(
       (site,request) =>
         request
@@ -369,7 +364,6 @@ with Logging
 
     log.debug(s"Executing Peer-to-Peer Query ${q}") //TODO: Query to JSON
 
-//    scatterGather("bwhc/peer2peer/api/query")(
     scatterGather(s"$baseUri/query")(
       (site,request) =>
         request
@@ -414,7 +408,6 @@ with Logging
 
             log.debug(s"Site: $name")
 
-//            request("/bwhc/peer2peer/api/MTBFile:request",Some(virtualHost))
             request(s"$baseUri/MTBFile:request",Some(virtualHost))
               .post(Json.toJson(mfreq))
               .map {
