@@ -26,6 +26,7 @@ lazy val global = project
      bwhc_connector,
      bwhc_broker_connector,
      fs_mtbfile_db,
+     kaplan_meier,
      tests
   )
 
@@ -99,7 +100,20 @@ lazy val fs_mtbfile_db = project
     settings,
     libraryDependencies ++= Seq(
       dependencies.scalatest,
-      dependencies.bwhc_dto_gens
+      dependencies.repo_utils,
+      dependencies.bwhc_dto_gens,
+    )
+  )
+  .dependsOn(
+    impl
+  )
+
+lazy val kaplan_meier = project
+  .settings(
+    name := "kaplan-meier-util",
+    settings,
+    libraryDependencies ++= Seq(
+      dependencies.scalatest,
     )
   )
   .dependsOn(
@@ -136,13 +150,11 @@ lazy val dependencies =
     val play_ws_client     = "com.typesafe.play"      %% "play-ahc-ws-standalone"  % "2.1.2"
     val play_ws_json       = "com.typesafe.play"      %% "play-ws-standalone-json" % "2.1.2"
     val scala_xml          = "org.scala-lang.modules" %% "scala-xml"               % "2.0.0"
-    val bwhc_utils         = "de.bwhc"                %% "utils"                   % "1.0-SNAPSHOT"
+//    val bwhc_utils         = "de.bwhc"                %% "utils"                   % "1.0-SNAPSHOT"
+    val repo_utils         = "de.ekut.tbi"            %% "repository-utils"        % "1.0-SNAPSHOT"
     val bwhc_data_api      = "de.bwhc"                %% "data-entry-service-api"  % "1.1-SNAPSHOT"
     val bwhc_data_impl     = "de.bwhc"                %% "data-entry-service-impl" % "1.1-SNAPSHOT"
     val bwhc_dto_gens      = "de.bwhc"                %% "mtb-dto-generators"      % "1.1-SNAPSHOT"
-//    val bwhc_data_impl     = "de.bwhc"                %% "data-entry-service-impl" % "1.0-SNAPSHOT"
-//    val bwhc_data_api      = "de.bwhc"                %% "data-entry-service-api"  % "1.0-SNAPSHOT"
-//    val bwhc_dto_gens      = "de.bwhc"                %% "mtb-dto-generators"      % "1.0-SNAPSHOT"
     val hgnc_catalog_api   = "de.bwhc"                %% "hgnc-api"                % "1.0-SNAPSHOT"
     val icd_catalogs_api   = "de.bwhc"                %% "icd-catalogs-api"        % "1.0-SNAPSHOT"
     val med_catalog_api    = "de.bwhc"                %% "medication-catalog-api"  % "1.0-SNAPSHOT"

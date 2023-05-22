@@ -2,14 +2,55 @@ package de.bwhc.mtb.query.impl
 
 
 import java.time.LocalDateTime
-import scala.concurrent.{ExecutionContext,Future}
-import de.bwhc.util.spi.{SPI,SPILoader}
-import de.bwhc.mtb.query.api.{Query,Querier,SavedQueryInfo}
+import scala.concurrent.{
+  ExecutionContext,
+  Future
+}
+import de.bwhc.util.spi.{
+  SPI,
+  SPILoader
+}
+import de.bwhc.mtb.query.api.{
+  PreparedQuery,
+  Querier
+}
 
 
-trait QueryDBOps[F[_],Env]
+trait QueryDB
 {
 
+  def preparedQueryId: PreparedQuery.Id
+
+  def save(
+    pq: PreparedQuery
+  )(
+    implicit ec: ExecutionContext
+  ): Future[PreparedQuery]
+
+
+  def preparedQueries(
+    creator: Querier
+  )(
+    implicit ec: ExecutionContext
+  ): Future[Seq[PreparedQuery]]
+
+
+  def preparedQuery(
+    id: PreparedQuery.Id
+  )(
+    implicit ec: ExecutionContext
+  ): Future[Option[PreparedQuery]]
+
+
+  def delete(
+    id: PreparedQuery.Id
+  )(
+    implicit ec: ExecutionContext
+  ): Future[Option[PreparedQuery]]
+
+
+
+/*
   def save(
     query: SavedQuery
   )(
@@ -36,11 +77,9 @@ trait QueryDBOps[F[_],Env]
   )(
     implicit env: Env
   ): F[Option[SavedQuery]]
-
+*/
 
 }
-
-trait QueryDB extends QueryDBOps[Future,ExecutionContext]
 
 trait QueryDBProvider extends SPI[QueryDB]
 

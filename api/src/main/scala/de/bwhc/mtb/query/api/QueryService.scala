@@ -16,6 +16,7 @@ import de.bwhc.mtb.data.entry.impl.{
 trait QueryService
 extends DataOps
    with QueryOps
+   with PreparedQueryOps
    with QCReportingOps
    with TherapyReportingOps
    with PeerToPeerOps

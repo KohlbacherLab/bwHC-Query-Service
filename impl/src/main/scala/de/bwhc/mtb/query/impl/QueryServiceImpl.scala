@@ -3,7 +3,7 @@ package de.bwhc.mtb.query.impl
 
 
 import java.time.{Instant,YearMonth,LocalDateTime}
-import scala.util.{Either,Success}
+import scala.util.{Either,Success,Failure}
 import scala.concurrent.{
   Future,
   ExecutionContext
@@ -12,12 +12,14 @@ import play.api.libs.json.{Json,Writes}
 import cats.data.{
   Ior,
   IorNel,
+  EitherNel,
   IorT,
   OptionT,
   NonEmptyList
 }
 import cats.syntax.apply._
 import cats.syntax.either._
+import cats.syntax.validated._
 import cats.syntax.ior._
 import cats.instances.future._
 import cats.instances.list._
@@ -28,6 +30,7 @@ import de.bwhc.mtb.query.api.ReportingAliases._
 import de.bwhc.mtb.data.entry.dtos.{
   MTBFile,
   Patient,
+  Consent,
   Coding,
   Gender,
   ICD10GM,
@@ -38,6 +41,10 @@ import de.bwhc.mtb.data.entry.dtos.{
   Specimen,
   SomaticNGSReport,
   Variant,
+  SimpleVariant,
+  CNV,
+  DNAFusion,
+  RNAFusion,
   RECIST,
   ZPM,
   ValueSets
@@ -47,6 +54,10 @@ import de.bwhc.mtb.data.entry.views.{
   MTBFileView,
   CarePlanView,
   TherapyRecommendationView,
+  SimpleVariantView,
+  CNVView,
+  DNAFusionView,
+  RNAFusionView
 }
 import de.bwhc.catalogs.med.MedicationCatalog
 import de.bwhc.catalogs.icd.ICD10GMCatalogs
@@ -86,13 +97,17 @@ object QueryServiceImpl
   implicit val icd10Catalogs =
     ICD10GMCatalogs.getInstance.get
 
+  private val queryDB =
+    QueryDB.getInstance.get
+
 
   val instance =
     new QueryServiceImpl(
       localSite,
       db,
       bwHC,
-      queryCache
+      queryCache,
+      queryDB
     )
 
 }
@@ -114,7 +129,8 @@ class QueryServiceImpl
   private val localSite: ZPM,
   private val db: LocalDB,
   private val bwHC: BwHCConnector,
-  private val queryCache: QueryCache
+  private val queryCache: QueryCache,
+  private val queryDB: QueryDB
 )(
   implicit val medicationCatalog: MedicationCatalog,
   implicit val icd10Catalogs: ICD10GMCatalogs
@@ -129,7 +145,20 @@ with FilteringOps
   import Mappings._
 
 
-  def formattedJson[T: Writes](t: T) = prettyPrint(toJson(t)) 
+  private def patch[T](
+    t: T
+  )(
+    patches: Option[T => T]*
+  ): T = {
+    
+    patches.foldLeft(
+      t
+    )(
+      (tpr,patch) => patch.fold(tpr)(p => p(tpr))
+    )
+  }
+
+  private def formattedJson[T: Writes](t: T) = prettyPrint(toJson(t)) 
 
 
   //---------------------------------------------------------------------------
@@ -501,7 +530,6 @@ Medication filter: ${medication.map(_.code.value).getOrElse("-")}"""
           .map(List(_))
       )
 
-//   db.latestSnapshots
     db.findMatching(parameters)       
       .map(_.map(_.data))
       .map(toPatientTherapies(localSite,_)(request.body))
@@ -567,9 +595,136 @@ Medication filter: ${medication.map(_.code.value).getOrElse("-")}"""
 
 
   //---------------------------------------------------------------------------
+  // PreparedQuery Operations
+  //---------------------------------------------------------------------------
+  
+  override def process(
+    cmd: PreparedQuery.Command
+  )(
+    implicit
+    querier: Querier,
+    ec: ExecutionContext
+  ): Future[EitherNel[String,PreparedQuery]] = {
+
+    import scala.util.chaining._
+    import PreparedQuery.{Create,Update,Delete}
+
+    cmd match {
+
+      case Create(name,params) =>
+
+        log.info(s"Storing new PreparedQuery")
+
+        ParameterValidation(params) match {
+
+          case Valid(parameters) =>
+            queryDB.save(
+              PreparedQuery(
+                queryDB.preparedQueryId,
+                querier,
+                LocalDateTime.now,
+                name,
+                parameters,
+                Instant.now
+              )
+            )
+            .map(_.rightNel[String])
+            .recover { 
+              case t =>
+                s"Failed to save PreparedQuery"
+                  .tap(log.error(_,t))
+                  .pipe(_.leftNel[PreparedQuery])
+            }
+
+          case Invalid(errors) =>
+            Future.successful(errors.asLeft[PreparedQuery])
+        }
+
+      case Update(id,optName,optParameters) =>
+        log.info(s"Updating PreparedQuery ${id.value}")
+
+        queryDB.preparedQuery(id)
+          .flatMap {
+            case Some(query) =>
+
+              optParameters.map(ParameterValidation)
+                .map(_.map(Some(_)))
+                .getOrElse(None.validNel[String]) match {
+
+                case Valid(parameters) =>
+                  queryDB.save(
+                    patch(query)(
+                      optName.map(n => (pq => pq.copy(name = n))),
+                      optParameters.map(p => (pq => pq.copy(parameters = p))),
+                    )
+                    .copy(lastUpdate = Instant.now)
+                  )
+                  .map(_.rightNel[String])
+                  .recover { 
+                    case t =>
+                      s"Failed to update PreparedQuery ${id.value}"
+                        .tap(log.error(_,t))
+                        .pipe(_.leftNel[PreparedQuery])
+                  }
+
+                case Invalid(errors) =>
+                  Future.successful(errors.asLeft[PreparedQuery])
+
+              }
+
+            case None =>
+              Future.successful(s"Invalid PreparedQuery ID ${id.value}".leftNel[PreparedQuery])
+          }
+
+
+      case Delete(id) =>
+        log.info(s"Deleting PreparedQuery ${id.value}")
+        queryDB.delete(id)
+          .map(_.toRight(s"Invalid PreparedQuery ID ${id.value}").toEitherNel)
+
+    }
+
+  }
+
+
+  override def preparedQueries(
+    implicit
+    querier: Querier,
+    ec: ExecutionContext
+  ): Future[Either[String,Seq[PreparedQuery]]] = {
+
+    log.info(s"Loading Prepared Queries of $querier")
+
+    queryDB.preparedQueries(querier)
+      .map(_.asRight[String])
+      .recover {
+        case t => t.getMessage.asLeft[Seq[PreparedQuery]]
+      }
+  }
+
+
+  override def preparedQuery(
+    id: PreparedQuery.Id,
+  )(
+    implicit
+    querier: Querier,
+    ec: ExecutionContext
+  ): Future[Either[String,Option[PreparedQuery]]] = {
+
+    log.info(s"Loading Prepared Query ${id.value} for $querier")
+
+    queryDB.preparedQuery(id)
+      .map(_.asRight[String])
+      .recover {
+        case t => t.getMessage.asLeft[Option[PreparedQuery]]
+      }
+  }
+
+
+  //---------------------------------------------------------------------------
   // Query Operations
   //---------------------------------------------------------------------------
-
+  
   override def process(
     cmd: QueryOps.Command
   )(
@@ -769,19 +924,6 @@ Medication filter: ${medication.map(_.code.value).getOrElse("-")}"""
 
   }
 
-  
-  private def patch[T](
-    t: T
-  )(
-    patches: Option[T => T]*
-  ): T = {
-    
-    patches.foldLeft(
-      t
-    )(
-      (tpr,patch) => patch.fold(tpr)(p => p(tpr))
-    )
-  }
 
 
   private def submitQuery(
@@ -820,6 +962,7 @@ Medication filter: ${medication.map(_.code.value).getOrElse("-")}"""
 
     val localResults =
       db.findMatching(ParameterProcessor(params))
+        .map(_.filter(_.data.consent.status == Consent.Status.Active))
         .map(_.toList)
         .andThen {
           case Success(snps) => {
@@ -881,6 +1024,68 @@ Medication filter: ${medication.map(_.code.value).getOrElse("-")}"""
         )
       }   
     }   
+  }
+
+
+  override def variantsOfInterestOf(
+    query: Query.Id,
+  )(
+    implicit ec: ExecutionContext
+  ): Future[Option[VariantsOfInterest]] = {
+
+    import VariantFilteringOps._
+    import de.bwhc.mtb.data.entry.views.mappings._
+
+    Future {
+      for {
+        parameters <-
+          queryCache.get(query).map(_.parameters)
+
+        mtbfiles <- 
+          queryCache.resultsOf(query)
+
+        ngsReports =
+          mtbfiles.flatMap(_.ngsReports.getOrElse(List.empty))
+
+      } yield {
+        VariantsOfInterest(
+          query,
+          ngsReports
+            .flatMap(
+              ngs =>
+                ngs.simpleVariants.getOrElse(List.empty)
+                  .map(_.copy(patient = Some(ngs.patient)))
+            )
+            .withFilter(SnvOfInterest(parameters.simpleVariants,parameters.mutatedGenes))
+            .map(_.mapTo[SimpleVariantView]),
+          ngsReports
+            .flatMap(
+              ngs => 
+                ngs.copyNumberVariants.getOrElse(List.empty)
+                  .map(_.copy(patient = Some(ngs.patient)))
+            )
+            .withFilter(CnvOfInterest(parameters.copyNumberVariants,parameters.mutatedGenes))
+            .map(_.mapTo[CNVView]),
+          ngsReports
+            .flatMap(
+              ngs =>
+                ngs.dnaFusions.getOrElse(List.empty)
+                  .map(_.copy(patient = Some(ngs.patient)))
+            )
+            .withFilter(DnaFusionOfInterest(parameters.dnaFusions,parameters.mutatedGenes))
+            .map(_.mapTo[DNAFusionView]),
+          ngsReports
+            .flatMap(
+              ngs =>
+                ngs.rnaFusions.getOrElse(List.empty)
+                  .map(_.copy(patient = Some(ngs.patient)))
+            )
+            .withFilter(RnaFusionOfInterest(parameters.rnaFusions,parameters.mutatedGenes))
+            .map(_.mapTo[RNAFusionView]),
+        )
+      }
+    }
+    
   }
 
 

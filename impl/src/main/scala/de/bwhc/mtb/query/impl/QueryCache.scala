@@ -113,7 +113,7 @@ with Logging
 
       val timedOutQueryIds =
         queries.values
-          .filter(_.lastUpdate isBefore Instant.now.minusSeconds(1800)) // 30 min timeout limit
+          .filter(_.lastUpdate isBefore Instant.now.minusSeconds(600)) // 10 min timeout limit
           .map(_.id)
 
       if (timedOutQueryIds.nonEmpty){

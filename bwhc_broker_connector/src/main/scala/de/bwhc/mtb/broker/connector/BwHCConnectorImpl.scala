@@ -221,6 +221,8 @@ with Logging
 
     import PeerStatus._
 
+    log.info("Checking connection status to peers")
+
     scatterGather(s"$baseUri/status")(
       (site,request) =>
         request
@@ -229,11 +231,16 @@ with Logging
             response =>
               if (response.status == OK)
                 PeerStatusReport.Info(ZPM(site),Online,"-")
-              else
-                PeerStatusReport.Info(ZPM(site),Offline,response.body[String])
+              else {
+                val msg = response.body[String]
+                log.error(s"Problem in peer-to-peer status check of site '$site': $msg")
+                PeerStatusReport.Info(ZPM(site),Offline,msg)
+              }
           )
           .recover {
-            case t => PeerStatusReport.Info(ZPM(site),Offline,t.getMessage)
+            case t =>
+              log.error(s"Problem in peer-to-peer status check of site '$site'",t)
+              PeerStatusReport.Info(ZPM(site),Offline,t.getMessage)
           }
     )(
       List.empty[PeerStatusReport.Info]

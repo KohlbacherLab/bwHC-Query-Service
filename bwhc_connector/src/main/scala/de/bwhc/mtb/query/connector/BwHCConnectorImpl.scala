@@ -163,6 +163,8 @@ with Logging
 
     import PeerStatus._
 
+    log.info("Checking connection status to peers")
+
     scatterGather("status")(
       (site,request) =>
         request
@@ -171,11 +173,16 @@ with Logging
             response =>
               if (response.status == OK)
                 PeerStatusReport.Info(site,Online,"-")
-              else
-                PeerStatusReport.Info(site,Offline,response.body[String])
+              else {
+                val msg = response.body[String]
+                log.error(s"Problem in peer-to-peer status check of site '$site': $msg")
+                PeerStatusReport.Info(site,Offline,msg)
+              }
           )
           .recover {
-            case t => PeerStatusReport.Info(site,Offline,t.getMessage)
+            case t =>
+              log.error(s"Problem in peer-to-peer status check of site '$site'",t)
+              PeerStatusReport.Info(site,Offline,t.getMessage)
           }
     )(
       List.empty[PeerStatusReport.Info]

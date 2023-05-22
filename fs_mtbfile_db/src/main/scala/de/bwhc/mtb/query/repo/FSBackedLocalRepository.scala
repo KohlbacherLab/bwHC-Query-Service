@@ -30,7 +30,8 @@ import de.bwhc.mtb.query.api.{
 }
 import de.bwhc.mtb.query.impl.{
   LocalDB,
-  LocalDBProvider
+  LocalDBProvider,
+  VariantFilteringOps
 }
 
 
@@ -127,7 +128,7 @@ object FSBackedLocalDB
 
   import scala.language.implicitConversions
 
-
+/*
   implicit def snvParametersToPredicate(params: SNVParameters): SimpleVariant => Boolean = {
   
     snv =>
@@ -180,11 +181,14 @@ object FSBackedLocalDB
         ) 
 
   }
-
-
+*/
+  
   implicit def toPredicate(params: Parameters): Snapshot[MTBFile] => Boolean = {
 
     case Snapshot(_,_,mtbfile) =>
+
+      import VariantFilteringOps._
+
 
       def matchesQuery[T](
         vals: Iterable[T],
@@ -235,12 +239,6 @@ object FSBackedLocalDB
           .getOrElse(List.empty)
           .flatMap(_.history.maxByOption(_.recordedOn))
           .map(_.medication.getOrElse(List.empty).toSet)
-/*          
-          .map {
-            case th: StartedMolecularTherapy => th.medication.getOrElse(List.empty).toSet 
-            case _                           => Set.empty[Medication.Coding]
-          }
-*/          
           .map(_.map(_.code))
           .fold(Set.empty[Medication.Code])(_ ++ _)
 
@@ -292,15 +290,18 @@ object FSBackedLocalDB
 
 
       lazy val snvsMatch =
-        params.simpleVariants.filter(_.nonEmpty)
+        params.simpleVariants
+          .filter(_.nonEmpty)
           .fold(true){ snvParams => 
 
             val snvs =
               mtbfile.ngsReports
                 .getOrElse(List.empty)
                 .flatMap(_.simpleVariants.getOrElse(List.empty))
-
-            snvParams.forall(snvs.exists(_))
+          
+            // check if any param matches, not all
+            snvParams.exists(snvs.exists(_)) 
+//            snvParams.forall(snvs.exists(_))
           }
         
       lazy val cnvsMatch =
@@ -312,7 +313,9 @@ object FSBackedLocalDB
                 .getOrElse(List.empty)
                 .flatMap(_.copyNumberVariants.getOrElse(List.empty))
 
-            cnvParams.forall(cnvs.exists(_))
+            // check if any param matches, not all
+            cnvParams.exists(cnvs.exists(_))
+//            cnvParams.forall(cnvs.exists(_))
           }
 
       lazy val dnaFusionsMatch =
@@ -324,7 +327,9 @@ object FSBackedLocalDB
                 .getOrElse(List.empty)
                 .flatMap(_.dnaFusions.getOrElse(List.empty))
 
-            fusionParams.forall(dnaFusions.exists(_))
+            // check if any param matches, not all
+            fusionParams.exists(dnaFusions.exists(_))
+//            fusionParams.forall(dnaFusions.exists(_))
           }
 
       lazy val rnaFusionsMatch =
@@ -336,7 +341,9 @@ object FSBackedLocalDB
                 .getOrElse(List.empty)
                 .flatMap(_.rnaFusions.getOrElse(List.empty))
 
-            fusionParams.forall(rnaFusions.exists(_))
+            // check if any param matches, not all
+            fusionParams.exists(rnaFusions.exists(_))
+//            fusionParams.forall(rnaFusions.exists(_))
           }
 
       snvsMatch &&

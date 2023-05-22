@@ -153,6 +153,27 @@ class Tests extends AsyncFlatSpec
   }
 
 
+  "PreparedQuery operations" should "have worked" in {
+  
+    for {
+
+      result <-
+        service ! PreparedQuery.Create(
+          "Dummy PreparedQuery",
+          Parameters.empty.copy(
+            diagnoses = Some(List(Coding(ICD10GM("C25"),None)))
+          )
+        )
+
+      created = result.isRight mustBe true
+        
+      queries <- service.preparedQueries
+
+    } yield queries.toOption.value must not be (empty)
+
+  }
+
+
   "Local Query results and filtering operations" must "be valid" in {
 
     import extensions._

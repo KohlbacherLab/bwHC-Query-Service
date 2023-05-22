@@ -120,7 +120,7 @@ with Logging
         molTh     <- mtbfile.molecularTherapies.get.map(_.history.minBy(_.recordedOn))
         rec       =  recomms.find(_.id == molTh.basedOn).get
         if (rec.issuedOn isDefined)
-        t         =  tUnit.between(molTh.recordedOn,rec.issuedOn.get)
+        t         =  tUnit.between(rec.issuedOn.get,molTh.recordedOn)
       } yield t
 
 

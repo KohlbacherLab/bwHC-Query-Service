@@ -96,13 +96,19 @@ trait QueryOps
     implicit ec: ExecutionContext
   ): Future[Option[Iterable[NGSSummary]]]
 
+  
+  def variantsOfInterestOf(
+    query: Query.Id,
+  )(
+    implicit ec: ExecutionContext
+  ): Future[Option[VariantsOfInterest]]
+
 
   def therapyRecommendationsFrom(
     query: Query.Id,
   )(
     implicit ec: ExecutionContext
   ): Future[Option[Iterable[TherapyRecommendationSummary]]]
-//  ): Future[Option[Iterable[TherapyRecommendationView]]]
 
 
   def molecularTherapiesFrom(
@@ -110,7 +116,6 @@ trait QueryOps
   )(
     implicit ec: ExecutionContext
   ): Future[Option[Iterable[MolecularTherapySummary]]]
-//  ): Future[Option[Iterable[MolecularTherapyView]]]
 
 
   def savedQueriesOf(
