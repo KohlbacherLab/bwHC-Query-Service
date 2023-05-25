@@ -2,12 +2,12 @@ package de.bwhc.mtb.query.api
 
 
 import play.api.libs.json.Json
-import de.bwhc.mtb.data.entry.dtos.{
+import de.bwhc.mtb.dtos.{
   Patient,
   TherapyRecommendation,
   LevelOfEvidence
 }
-import de.bwhc.mtb.data.entry.views.{
+import de.bwhc.mtb.views.{
   Or,
   NotAvailable,
   ICD10Display,

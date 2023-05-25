@@ -6,14 +6,14 @@ import cats.data.{Ior,IorNel}
 import cats.syntax.either._
 import cats.syntax.ior._
 import de.ekut.tbi.generators.Gen
-import de.bwhc.mtb.data.gens._
-import de.bwhc.mtb.data.entry.dtos.{
+import de.bwhc.mtb.dtos.{
   Coding,
   ICD10GM,
   Medication,
   MTBFile,
   ZPM
 }
+import de.bwhc.mtb.dto.gens._
 import de.bwhc.mtb.query.api._
 import ReportingAliases._
 import de.bwhc.mtb.query.impl.{

@@ -14,7 +14,7 @@ import cats.data.IorNel
 
 import play.api.libs.json._
 
-import de.bwhc.mtb.data.entry.dtos.
+import de.bwhc.mtb.dtos.
 { 
   MTBFile,
   ZPM

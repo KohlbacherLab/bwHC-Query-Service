@@ -15,7 +15,7 @@ import cats.data.{
 import play.api.libs.json.{Json,Format,Reads,Writes,JsObject}
 import de.bwhc.util.data.{Interval,ClosedInterval}
 import de.bwhc.util.json.time._
-import de.bwhc.mtb.data.entry.dtos.{
+import de.bwhc.mtb.dtos.{
   Coding,
   Gender,
   ICD10GM,
@@ -64,7 +64,7 @@ object Query
 
   implicit val formatId = Json.valueFormat[Id]
 
-  import de.bwhc.mtb.data.entry.dtos.{ValueSet => ValSet}
+  import de.bwhc.mtb.dtos.{ValueSet => ValSet}
   import ValSet.Concept
 
 

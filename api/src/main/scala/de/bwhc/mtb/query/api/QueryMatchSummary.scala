@@ -2,8 +2,8 @@ package de.bwhc.mtb.query.api
 
 
 import play.api.libs.json.Json
-import de.bwhc.mtb.data.entry.dtos.Patient
-import de.bwhc.mtb.data.entry.dtos.{
+import de.bwhc.mtb.dtos.Patient
+import de.bwhc.mtb.dtos.{
   Coding,
   ICD10GM,
   ICDO3M,
@@ -11,7 +11,7 @@ import de.bwhc.mtb.data.entry.dtos.{
   RECIST,
   Variant
 }
-import de.bwhc.mtb.data.entry.views.{
+import de.bwhc.mtb.views.{
   ICD10Display,
   ICDO3MDisplay,
   MedicationDisplay,

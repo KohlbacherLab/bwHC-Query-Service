@@ -9,7 +9,7 @@ import de.bwhc.util.data.Validation.dsl._
 import de.bwhc.catalogs.icd.{ICD10GMCatalogs,ICDO3Catalogs}
 import de.bwhc.catalogs.hgnc.{HGNCGene,HGNCCatalog,HGNCId}
 import de.bwhc.catalogs.med.MedicationCatalog
-import de.bwhc.mtb.data.entry.dtos.{
+import de.bwhc.mtb.dtos.{
   Coding,
   ICDO3M,
   ICD10GM,

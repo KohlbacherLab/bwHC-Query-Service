@@ -12,7 +12,7 @@ import scala.concurrent.{
 }
 import cats.data.{NonEmptyList,IorNel}
 import play.api.libs.json._
-import de.bwhc.mtb.data.entry.dtos.{
+import de.bwhc.mtb.dtos.{
   Coding,
   ICD10GM,
   Medication,
@@ -21,7 +21,7 @@ import de.bwhc.mtb.data.entry.dtos.{
   Response,
   ZPM
 }
-import de.bwhc.mtb.data.entry.views.SupportingVariantDisplay
+import de.bwhc.mtb.views.SupportingVariantDisplay
 
 
 
@@ -186,7 +186,7 @@ object PatientTherapies
     import de.bwhc.util.csv.CsvWriter
     import CsvWriter.derivation._
     import CsvWriter.temporal._
-    import de.bwhc.mtb.data.entry.dtos.{
+    import de.bwhc.mtb.dtos.{
       Period,
       OpenEndPeriod,
       ClosedPeriod,

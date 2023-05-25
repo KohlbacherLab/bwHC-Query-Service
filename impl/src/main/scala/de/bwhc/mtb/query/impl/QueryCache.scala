@@ -19,7 +19,7 @@ import de.bwhc.mtb.query.api.{
   Selection
 }
 
-import de.bwhc.mtb.data.entry.dtos.MTBFile
+import de.bwhc.mtb.dtos.MTBFile
 
 
 

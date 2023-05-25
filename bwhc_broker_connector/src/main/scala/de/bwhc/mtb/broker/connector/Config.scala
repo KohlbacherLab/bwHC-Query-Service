@@ -14,7 +14,7 @@ import play.api.libs.json.{
   JsObject,
   JsValue
 }
-import de.bwhc.mtb.data.entry.dtos.ZPM
+import de.bwhc.mtb.dtos.ZPM
 
 
 trait Config

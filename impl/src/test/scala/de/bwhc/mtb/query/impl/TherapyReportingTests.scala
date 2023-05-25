@@ -16,7 +16,7 @@ import de.bwhc.mtb.query.api.{
 import de.bwhc.mtb.query.api.ReportingAliases._
 import de.bwhc.catalogs.med.MedicationCatalog
 import de.bwhc.catalogs.icd.ICD10GMCatalogs
-import de.bwhc.mtb.data.entry.dtos.{
+import de.bwhc.mtb.dtos.{
   Coding,
   ICD10GM,
   Medication,
@@ -24,7 +24,7 @@ import de.bwhc.mtb.data.entry.dtos.{
   ZPM
 }
 import de.ekut.tbi.generators.Gen
-import de.bwhc.mtb.data.gens._
+import de.bwhc.mtb.dto.gens._
 import play.api.libs.json.Json
 
 

@@ -3,14 +3,14 @@ package de.bwhc.mtb.query.api
 
 import java.time.LocalDate
 import play.api.libs.json.Json
-import de.bwhc.mtb.data.entry.dtos.{
+import de.bwhc.mtb.dtos.{
   Patient,
   TherapyRecommendation,
   TherapyId,
   Dosage,
   LevelOfEvidence
 }
-import de.bwhc.mtb.data.entry.views.{
+import de.bwhc.mtb.views.{
   Or,
   NotAvailable,
   NoValue,

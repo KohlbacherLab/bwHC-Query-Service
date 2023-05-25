@@ -8,7 +8,7 @@ import de.bwhc.mtb.query.api.{
   Selection,
   VitalStatus
 }
-import de.bwhc.mtb.data.entry.dtos.{
+import de.bwhc.mtb.dtos.{
   MTBFile,
   Patient,
   Coding,
@@ -78,7 +78,7 @@ trait FilteringOps
   ): Query.NGSSummaryFilter = {
 
     import scala.math.Ordering.Double.IeeeOrdering
-    import de.bwhc.mtb.data.entry.dtos.ValueSets._
+    import de.bwhc.mtb.dtos.ValueSets._
 
     val specimens =
       mtbfiles.toList.flatMap(_.specimens.getOrElse(List.empty))

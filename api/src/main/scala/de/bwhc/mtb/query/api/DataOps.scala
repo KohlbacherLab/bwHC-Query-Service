@@ -9,11 +9,9 @@ import scala.concurrent.{
   Future,
   ExecutionContext
 }
-
 import cats.data.NonEmptyList
-
 import de.bwhc.util.ddd.Event
-import de.bwhc.mtb.data.entry.dtos._
+import de.bwhc.mtb.dtos._
 
 
 trait DataOps

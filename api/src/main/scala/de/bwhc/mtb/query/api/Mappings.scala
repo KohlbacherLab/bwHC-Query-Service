@@ -4,7 +4,7 @@ package de.bwhc.mtb.query.api
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import cats.syntax.either._
-import de.bwhc.mtb.data.entry.dtos.{
+import de.bwhc.mtb.dtos.{
   Specimen,
   SomaticNGSReport,
   Patient,
@@ -14,12 +14,6 @@ import de.bwhc.mtb.data.entry.dtos.{
   Coding,
   TherapyRecommendation,
   MolecularTherapy,
-/*  
-  NotDoneTherapy,
-  StoppedTherapy,
-  CompletedTherapy,
-  OngoingTherapy,
-*/
   Response,
   ICD10GM,
   Variant,
@@ -27,7 +21,7 @@ import de.bwhc.mtb.data.entry.dtos.{
   RECIST,
   Dosage
 }
-import de.bwhc.mtb.data.entry.views.{
+import de.bwhc.mtb.views.{
   DiagnosisView,
   ECOGDisplay,
   ICD10Display,
@@ -45,9 +39,9 @@ import de.bwhc.mtb.data.entry.views.{
 trait Mappings
 {
 
-  import de.bwhc.mtb.data.entry.views.mappings._
+  import de.bwhc.mtb.views.mappings._
 
-  import de.bwhc.mtb.data.entry.dtos.ValueSets._
+  import de.bwhc.mtb.dtos.ValueSets._
 
   import java.time.temporal.ChronoUnit.YEARS
 

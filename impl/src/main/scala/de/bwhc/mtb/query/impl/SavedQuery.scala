@@ -2,7 +2,7 @@ package de.bwhc.mtb.query.impl
 
 
 import java.time.LocalDateTime
-import de.bwhc.mtb.data.entry.dtos.ZPM
+import de.bwhc.mtb.dtos.ZPM
 import de.bwhc.mtb.query.api.Query
 
 

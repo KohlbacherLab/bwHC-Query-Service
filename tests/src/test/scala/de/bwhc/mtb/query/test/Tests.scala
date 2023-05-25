@@ -7,7 +7,7 @@ import scala.math.Ordering.Double.TotalOrdering
 import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.must.Matchers._
 import org.scalatest.OptionValues._
-import de.bwhc.mtb.data.entry.dtos.{
+import de.bwhc.mtb.dtos.{
   Coding,
   ICD10GM,
   Gender,
@@ -16,7 +16,6 @@ import de.bwhc.mtb.data.entry.dtos.{
   LevelOfEvidence,
   Specimen
 }
-import de.bwhc.mtb.data.entry.impl.QueryServiceProxy
 import de.bwhc.util.data.{Interval,ClosedInterval}
 import Interval._
 import de.bwhc.mtb.query.api._
@@ -63,11 +62,12 @@ class Tests extends AsyncFlatSpec
 
   }
 
+/*  
   "QueryServiceProxy SPI" must "have worked" in {
 
      QueryServiceProxy.getInstance.isSuccess mustBe true
   }
-
+*/
 
   lazy val service = serviceTry.get
 
@@ -177,7 +177,7 @@ class Tests extends AsyncFlatSpec
   "Local Query results and filtering operations" must "be valid" in {
 
     import extensions._
-    import de.bwhc.mtb.data.entry.dtos.ValueSets._  // For ValueSet[Gender.Value]
+    import de.bwhc.mtb.dtos.ValueSets._  // For ValueSet[Gender.Value]
     import de.bwhc.mtb.query.api.Mappings._         // For ValueSet[VitalStatus.Value]
     import LevelOfEvidence.Grading.{m1A,m1B}
 

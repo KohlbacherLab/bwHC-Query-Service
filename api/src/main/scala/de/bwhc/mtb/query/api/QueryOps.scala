@@ -18,14 +18,14 @@ import cats.data.{
 
 import play.api.libs.json.Json
 
-import de.bwhc.mtb.data.entry.dtos.{
+import de.bwhc.mtb.dtos.{
   MTBFile,
   Patient,
   Coding,
   ZPM
 }
 
-import de.bwhc.mtb.data.entry.views.{
+import de.bwhc.mtb.views.{
   MolecularTherapyView,
   MTBFileView,
   TherapyRecommendationView

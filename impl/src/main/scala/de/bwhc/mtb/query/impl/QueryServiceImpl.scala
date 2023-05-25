@@ -27,7 +27,7 @@ import de.bwhc.util.Logging
 import de.bwhc.util.data.ClosedInterval
 import de.bwhc.mtb.query.api._
 import de.bwhc.mtb.query.api.ReportingAliases._
-import de.bwhc.mtb.data.entry.dtos.{
+import de.bwhc.mtb.dtos.{
   MTBFile,
   Patient,
   Consent,
@@ -49,7 +49,7 @@ import de.bwhc.mtb.data.entry.dtos.{
   ZPM,
   ValueSets
 }
-import de.bwhc.mtb.data.entry.views.{
+import de.bwhc.mtb.views.{
   MolecularTherapyView,
   MTBFileView,
   CarePlanView,
@@ -269,7 +269,7 @@ with FilteringOps
     ec: ExecutionContext
   ): Future[Either[String,Option[MTBFileView]]] = {
 
-    import de.bwhc.mtb.data.entry.views.mappings._
+    import de.bwhc.mtb.views.mappings._
 
     val siteLog =
       origin.filterNot(_ == localSite)
@@ -1034,7 +1034,7 @@ Medication filter: ${medication.map(_.code.value).getOrElse("-")}"""
   ): Future[Option[VariantsOfInterest]] = {
 
     import VariantFilteringOps._
-    import de.bwhc.mtb.data.entry.views.mappings._
+    import de.bwhc.mtb.views.mappings._
 
     Future {
       for {
@@ -1165,7 +1165,7 @@ Medication filter: ${medication.map(_.code.value).getOrElse("-")}"""
     implicit ec: ExecutionContext
   ): Future[Option[Iterable[TherapyRecommendationSummary]]] = {
 
-    import de.bwhc.mtb.data.entry.views.mappings._
+    import de.bwhc.mtb.views.mappings._
 
     Future {
       for {
@@ -1228,7 +1228,7 @@ Medication filter: ${medication.map(_.code.value).getOrElse("-")}"""
     implicit ec: ExecutionContext
   ): Future[Option[Iterable[MolecularTherapySummary]]] = {
   
-    import de.bwhc.mtb.data.entry.views.mappings._
+    import de.bwhc.mtb.views.mappings._
 
     Future {
       for {
@@ -1322,7 +1322,7 @@ Medication filter: ${medication.map(_.code.value).getOrElse("-")}"""
     implicit ec: ExecutionContext
   ): Future[Option[MTBFileView]] = {
 
-    import de.bwhc.mtb.data.entry.views.mappings._
+    import de.bwhc.mtb.views.mappings._
 
     mtbFileFrom(query,patId)
       .map(_.map(_.mapTo[MTBFileView]))

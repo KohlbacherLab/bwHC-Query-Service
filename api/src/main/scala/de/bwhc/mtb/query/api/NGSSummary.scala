@@ -7,13 +7,13 @@ import java.time.LocalDate
 import play.api.libs.json.Json
 import de.bwhc.util.json._
 
-import de.bwhc.mtb.data.entry.dtos.{
+import de.bwhc.mtb.dtos.{
   Patient,
   Specimen,
   SomaticNGSReport
 }
 
-import de.bwhc.mtb.data.entry.views.{
+import de.bwhc.mtb.views.{
   ICD10Display,
   Or,
   NotAvailable,

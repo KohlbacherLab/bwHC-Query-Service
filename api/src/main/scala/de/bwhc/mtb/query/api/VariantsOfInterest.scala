@@ -2,7 +2,7 @@ package de.bwhc.mtb.query.api
 
 
 
-import de.bwhc.mtb.data.entry.views.{
+import de.bwhc.mtb.views.{
   SimpleVariantView,
   CNVView,
   DNAFusionView,

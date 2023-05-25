@@ -3,7 +3,7 @@ package de.bwhc.mtb.query.api
 
 import java.time.Instant
 import scala.concurrent.{ExecutionContext,Future}
-import de.bwhc.mtb.data.entry.dtos.{
+import de.bwhc.mtb.dtos.{
   Patient,
   MTBFile,
   ZPM
@@ -16,23 +16,6 @@ import play.api.libs.json.{
 }
 
 
-/*
-final case class PeerToPeerQuery
-(
-  id: Query.Id,
-  origin: ZPM,
-  querier: Querier,
-  parameters: Query.Parameters,
-  submittedAt: Instant = Instant.now
-)
-
-object PeerToPeerQuery
-{
-  implicit val format =
-    Json.format[PeerToPeerQuery]
-}
-*/
-
 final case class MTBFileParameters
 (
   patId: Patient.Id,
@@ -44,23 +27,6 @@ object MTBFileParameters
   implicit val format =
     Json.format[MTBFileParameters]
 }
-
-/*
-final case class PeerToPeerMTBFileRequest
-(
-  origin: ZPM,
-  querier: Querier,
-  patId: Patient.Id,
-  snpId: Option[Snapshot.Id],
-  submittedAt: Instant = Instant.now
-)
-
-object PeerToPeerMTBFileRequest
-{
-  implicit val format =
-    Json.format[PeerToPeerMTBFileRequest]
-}
-*/
 
 
 final case class PeerToPeerRequest[+T]

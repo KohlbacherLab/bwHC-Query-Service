@@ -6,13 +6,13 @@ import java.time.LocalDate
 
 import play.api.libs.json.Json
 
-import de.bwhc.mtb.data.entry.dtos.{
+import de.bwhc.mtb.dtos.{
   Coding,
   Patient,
   ZPM,
   ValueSet => ValSet
 }
-import de.bwhc.mtb.data.entry.views.{
+import de.bwhc.mtb.views.{
   Or,
   NotAvailable,
 }

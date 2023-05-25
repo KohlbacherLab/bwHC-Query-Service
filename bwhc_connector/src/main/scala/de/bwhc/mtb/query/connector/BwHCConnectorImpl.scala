@@ -28,7 +28,7 @@ import cats.syntax.ior._
 import cats.syntax.either._
 import cats.instances.list._
 import de.bwhc.util.Logging
-import de.bwhc.mtb.data.entry.dtos.{
+import de.bwhc.mtb.dtos.{
   Coding,
   ICD10GM,
   Medication,

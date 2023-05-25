@@ -32,7 +32,7 @@ import QCReport._
 import QCReport.CompletionLevel._
 import QCReport.TimeSpan._
 
-import de.bwhc.mtb.data.entry.dtos.{
+import de.bwhc.mtb.dtos.{
   MTBFile,
   Patient,
   ZPM

@@ -15,7 +15,7 @@ import de.bwhc.mtb.query.api.{
   Snapshot
 }
 
-import de.bwhc.mtb.data.entry.dtos.{
+import de.bwhc.mtb.dtos.{
   MTBFile,
   Patient
 }

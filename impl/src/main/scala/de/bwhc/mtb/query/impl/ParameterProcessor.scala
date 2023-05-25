@@ -4,7 +4,7 @@ package de.bwhc.mtb.query.impl
 
 import de.bwhc.catalogs.icd.{ICD10GMCatalogs,ICDO3Catalogs}
 
-import de.bwhc.mtb.data.entry.dtos.{
+import de.bwhc.mtb.dtos.{
   Coding,
   ICDO3M,
   ICD10GM,

@@ -5,7 +5,7 @@ package de.bwhc.mtb.query.api
 import java.time.YearMonth
 import java.time.temporal.ChronoUnit.YEARS
 
-import de.bwhc.mtb.data.entry.dtos.Patient
+import de.bwhc.mtb.dtos.Patient
 
 
 object extensions

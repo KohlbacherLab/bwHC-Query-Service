@@ -3,7 +3,7 @@ package de.bwhc.mtb.query.impl
 
 
 import java.time.LocalDateTime
-import de.bwhc.mtb.data.entry.dtos.{
+import de.bwhc.mtb.dtos.{
   Coding,
   ICD10GM,
   Medication,
@@ -409,7 +409,7 @@ trait TherapyReportingOperations
     icd10catalogs: ICD10GMCatalogs
   ): LocalReport[Seq[PatientTherapies]] = {
 
-    import de.bwhc.mtb.data.entry.views.mappings.supportingVariantToDisplay
+    import de.bwhc.mtb.views.mappings.supportingVariantToDisplay
 
     val therapyFilter: MolecularTherapy => Boolean =
       filters.medication

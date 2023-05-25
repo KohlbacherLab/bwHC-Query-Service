@@ -9,7 +9,7 @@ import scala.concurrent.{
 import cats.data.IorNel
 import de.bwhc.util.spi._
 import de.bwhc.mtb.query.api._
-import de.bwhc.mtb.data.entry.dtos.{
+import de.bwhc.mtb.dtos.{
   Coding,
   ICD10GM,
   MTBFile,

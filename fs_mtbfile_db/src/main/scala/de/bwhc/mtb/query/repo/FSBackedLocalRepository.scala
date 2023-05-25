@@ -22,7 +22,7 @@ import play.api.libs.json.{
   Format,
   Json
 }
-import de.bwhc.mtb.data.entry.dtos._
+import de.bwhc.mtb.dtos._
 import de.bwhc.mtb.query.api.{
   Snapshot,
   History,
@@ -60,7 +60,7 @@ object FSBackedLocalDB
   //---------------------------------------------------------------------------
   // To add random-generated MTBFiles in case of empty initial data
   import de.ekut.tbi.generators.Gen
-  import de.bwhc.mtb.data.gens._
+  import de.bwhc.mtb.dto.gens._
 
   implicit val rnd = new scala.util.Random(42)
 

@@ -1,7 +1,7 @@
 package de.bwhc.mtb.query.impl
 
 
-import de.bwhc.mtb.data.entry.dtos.{
+import de.bwhc.mtb.dtos.{
   Coding,
   Variant,
   Gene,
@@ -10,7 +10,7 @@ import de.bwhc.mtb.data.entry.dtos.{
   DNAFusion,
   RNAFusion,
 }
-import de.bwhc.mtb.data.entry.views.{
+import de.bwhc.mtb.views.{
   SimpleVariantView,
   CNVView,
   DNAFusionView,
