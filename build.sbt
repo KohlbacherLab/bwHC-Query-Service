@@ -36,9 +36,6 @@ lazy val api = project
     name := "query-service-api",
     settings,
     libraryDependencies ++= Seq(
-//      dependencies.bwhc_data_api,
-//      dependencies.bwhc_data_impl
-//      dependencies.bwhc_utils,
       dependencies.bwhc_mtb_dtos,
       dependencies.bwhc_mtb_views,
     )
@@ -51,9 +48,6 @@ lazy val impl = project
     settings,
     libraryDependencies ++= Seq(
       dependencies.scalatest,
-//      dependencies.hgnc_catalog_api,
-//      dependencies.icd_catalogs_api,
-//      dependencies.med_catalog_api, 
       dependencies.icd_catalogs_impl,
       dependencies.med_catalog_impl, 
       dependencies.hgnc_catalog_impl,
@@ -155,16 +149,9 @@ lazy val dependencies =
     val scala_xml          = "org.scala-lang.modules" %% "scala-xml"               % "2.0.0"
     val repo_utils         = "de.ekut.tbi"            %% "repository-utils"        % "1.0-SNAPSHOT"
     val bwhc_utils         = "de.bwhc"                %% "utils"                   % "1.1"
-//    val bwhc_data_api      = "de.bwhc"                %% "data-entry-service-api"  % "1.1-SNAPSHOT"
-//    val bwhc_data_impl     = "de.bwhc"                %% "data-entry-service-impl" % "1.1-SNAPSHOT"
     val bwhc_mtb_dtos      = "de.bwhc"                %% "mtb-dtos"                % "1.0-SNAPSHOT"
     val bwhc_mtb_dto_gens  = "de.bwhc"                %% "mtb-dto-generators"      % "1.0-SNAPSHOT"
     val bwhc_mtb_views     = "de.bwhc"                %% "mtb-views"               % "1.0-SNAPSHOT"
-/*
-    val hgnc_catalog_api   = "de.bwhc"                %% "hgnc-api"                % "1.0"
-    val icd_catalogs_api   = "de.bwhc"                %% "icd-catalogs-api"        % "1.0"
-    val med_catalog_api    = "de.bwhc"                %% "medication-catalog-api"  % "1.0"
-*/
     val hgnc_catalog_impl  = "de.bwhc"                %% "hgnc-impl"               % "1.0" % Test
     val icd_catalogs_impl  = "de.bwhc"                %% "icd-catalogs-impl"       % "1.0" % Test
     val med_catalog_impl   = "de.bwhc"                %% "medication-catalog-impl" % "1.0" % Test
@@ -182,9 +169,6 @@ lazy val compilerOptions = Seq(
   "-encoding", "utf8",
   "-unchecked",
   "-feature",
-//  "-language:existentials",
-//  "-language:higherKinds",
-//  "-language:implicitConversions",
   "-language:postfixOps",
   "-Xfatal-warnings",
   "-deprecation",
