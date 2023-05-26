@@ -159,4 +159,46 @@ class TherapyReportingTests extends AnyFlatSpec
   }
 
 
+
+  "Expansion of medication group coding to set containing all child substances" must "have worked" in {
+
+     val set =
+       expandToCodeset(
+         Medication.Coding(
+           code = Medication.Code("L01XX"),
+           system = Medication.System.ATC,
+           display = None,
+           version = Some("2020")
+         )
+       )
+
+     set.size must be > 1 
+
+  }
+
+
+  "Compiled PatientTherapies" must "not be empty" in {
+
+    val patientTherapiesReport =
+      toPatientTherapies(
+        zpm,
+        mtbfiles(100)
+      )(
+        Report.Filters(
+          Some(
+            Medication.Coding(
+              code = Medication.Code("L01XX"),
+              system = Medication.System.ATC,
+              display = None,
+              version = Some("2020")
+            )
+          )
+        )
+      )
+
+    patientTherapiesReport.data must not be (empty)  
+
+  }
+
+
 }

@@ -10,6 +10,7 @@ import org.scalatest.OptionValues._
 import de.bwhc.mtb.dtos.{
   Coding,
   ICD10GM,
+  Medication,
   Gender,
   ZPM,
   ValueSet,
@@ -62,12 +63,6 @@ class Tests extends AsyncFlatSpec
 
   }
 
-/*  
-  "QueryServiceProxy SPI" must "have worked" in {
-
-     QueryServiceProxy.getInstance.isSuccess mustBe true
-  }
-*/
 
   lazy val service = serviceTry.get
 
@@ -296,5 +291,28 @@ class Tests extends AsyncFlatSpec
     } yield patientsNonEmpty
 
   }
+
+
+  "Global PatientTherapy Report" must "have been valid (non-empty) with a medication group as filter parameter" in {
+
+    for {
+      result <-
+        service.compileGlobalPatientTherapies(
+          Some(
+            Medication.Coding(
+              code = Medication.Code("L01XX"),
+              system = Medication.System.ATC,
+              display = None,
+              version = Some("2020")
+            )
+          )
+        )     
+
+      report = result.toEither.toOption.value  
+
+    } yield report.data must not be empty
+
+  }
+
 
 }

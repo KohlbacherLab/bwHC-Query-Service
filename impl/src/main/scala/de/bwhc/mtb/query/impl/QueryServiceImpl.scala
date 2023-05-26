@@ -530,7 +530,7 @@ Medication filter: ${medication.map(_.code.value).getOrElse("-")}"""
           .map(List(_))
       )
 
-    db.findMatching(parameters)       
+    db.findMatching(ParameterProcessor(parameters))
       .map(_.map(_.data))
       .map(toPatientTherapies(localSite,_)(request.body))
       .map(_.rightNel[String])

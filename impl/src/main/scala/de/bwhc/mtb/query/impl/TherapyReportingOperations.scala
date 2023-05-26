@@ -228,10 +228,10 @@ trait TherapyReportingOperations
       .map(
         concept =>
           Coding(
-          ICD10GM(concept.code.value),
-          Some(concept.display),
-          None // erase version as all codes are combined
-        )
+            ICD10GM(concept.code.value),
+            Some(concept.display),
+            None // erase version as all codes are combined
+          )
       )
       .get // safe
   }    
@@ -269,7 +269,7 @@ trait TherapyReportingOperations
 
 
   // Expand medication to include substances if it's a medication class/group
-  private def expandToCodeset(
+  private[impl] def expandToCodeset(
     medication: Medication.Coding
   )(
     implicit 
