@@ -6,7 +6,11 @@ import cats.data.Validated.{validNel,invalidNel}
 import cats.data.ValidatedNel
 import de.bwhc.util.data.Validation._
 import de.bwhc.util.data.Validation.dsl._
-import de.bwhc.catalogs.icd.{ICD10GMCatalogs,ICDO3Catalogs}
+import de.bwhc.catalogs.icd.{
+  ICD10GM => ICD10,
+  ICD10GMCatalogs,
+  ICDO3Catalogs
+}
 import de.bwhc.catalogs.hgnc.{HGNCGene,HGNCCatalog,HGNCId}
 import de.bwhc.catalogs.med.MedicationCatalog
 import de.bwhc.mtb.dtos.{
@@ -19,6 +23,7 @@ import de.bwhc.mtb.dtos.{
   ValueSet,
   ValueSets,
 }
+import de.bwhc.mtb.dto.extensions.CodingExtensions._
 import de.bwhc.mtb.query.api.Query._
 import de.bwhc.mtb.query.api.Report
 
@@ -108,11 +113,11 @@ object ParameterValidation extends Validator[String,Parameters]
   import scala.language.implicitConversions
 
 
-  implicit val icd10s =
-    ICD10GMCatalogs.getInstance.get.codings()
+  implicit val icd10 =
+    ICD10GMCatalogs.getInstance.get
 
-  implicit val icdO3ms =
-    ICDO3Catalogs.getInstance.get.morphologyCodings()
+  implicit val icdO3 =
+    ICDO3Catalogs.getInstance.get
 
   implicit val hgnc =
     HGNCCatalog.getInstance.get
@@ -123,32 +128,23 @@ object ParameterValidation extends Validator[String,Parameters]
 
   implicit val icd10codingValidator: Validator[String,Coding[ICD10GM]] = {
     coding =>
-      icd10s.find(_.code.value == coding.code.value) mustBe defined otherwise (
+      icd10.coding(
+        ICD10.Code(coding.code.value),
+        coding.version.getOrElse(icd10.latestVersion)
+      ) mustBe defined otherwise (
         s"Invalid ICD-10-GM code ${coding.code.value}"
       ) map (
-        _.get
-      ) map (
-        icd10 =>
-          coding.copy(
-            display = Some(icd10.display),
-            version = Some(icd10.version.toString)
-          )
+        _ => coding.complete
       )
   }
 
 
   implicit val icdO3McodingValidator: Validator[String,Coding[ICDO3M]] = {
     coding =>
-      icdO3ms.find(_.code.value == coding.code.value) mustBe defined otherwise (
+      icdO3.morphologyCodings().find(_.code.value == coding.code.value) mustBe defined otherwise (
         s"Invalid ICD-O-3-M code ${coding.code.value}"
       ) map (
-        _.get
-      ) map (
-        icdo3m =>
-          coding.copy(
-            display = Some(icdo3m.display),
-            version = Some(icdo3m.version.toString)
-          )
+        _ => coding.complete
       )
   }
 
@@ -185,10 +181,7 @@ object ParameterValidation extends Validator[String,Parameters]
           atc.findWithCode(code,v) mustBe defined otherwise (
             s"Invalid ATC medication code '$code'"
           ) map (
-            atcEntry =>
-              coding.copy(
-                display = Some(atcEntry.get.name) // get safe here
-              )
+            _ => coding.complete
           )
       )
   }
