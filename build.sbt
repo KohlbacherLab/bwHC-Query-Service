@@ -153,7 +153,7 @@ lazy val dependencies =
     val bwhc_mtb_dto_gens  = "de.bwhc"                %% "mtb-dto-generators"      % "1.0-SNAPSHOT"
     val bwhc_mtb_views     = "de.bwhc"                %% "mtb-views"               % "1.0-SNAPSHOT"
     val hgnc_catalog_impl  = "de.bwhc"                %% "hgnc-impl"               % "1.0" % Test
-    val icd_catalogs_impl  = "de.bwhc"                %% "icd-catalogs-impl"       % "1.0" % Test
+    val icd_catalogs_impl  = "de.bwhc"                %% "icd-catalogs-impl"       % "1.1" % Test
     val med_catalog_impl   = "de.bwhc"                %% "medication-catalog-impl" % "1.0" % Test
   }
 

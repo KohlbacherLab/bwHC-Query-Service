@@ -17,7 +17,6 @@ import de.bwhc.mtb.dtos.{
   TherapyRecommendation,
   LevelOfEvidence,
   MolecularTherapy,
-//  StartedMolecularTherapy,
   Specimen,
   SomaticNGSReport,
   Variant,
@@ -145,6 +144,15 @@ trait FilteringOps
   }
 
 
+  private val EmptyMedication =
+    Medication.Coding(
+      Medication.Code("_empty-medication_"),
+      Medication.System.Unregistered,
+      Some("Keine Medikation (N/A)"),
+      Some("-")
+    ) 
+
+
   private def DefaultTherapyRecommendationFilter(
     mtbfiles: Iterable[MTBFile]
   )(
@@ -159,7 +167,8 @@ trait FilteringOps
 
 
     val medications =
-      recommendations.flatMap(_.medication.getOrElse(List.empty))
+      recommendations
+        .flatMap(_.medication.getOrElse(Some(EmptyMedication)))
         .distinctBy(_.code)
         .flatMap(toCoding)
         .toList
@@ -204,7 +213,8 @@ trait FilteringOps
     import ValueSets._
 
     val therapies =
-      mtbfiles.flatMap(_.molecularTherapies.getOrElse(List.empty))
+      mtbfiles
+        .flatMap(_.molecularTherapies.getOrElse(List.empty))
         .flatMap(_.history.maxByOption(_.recordedOn))
 
     val statusSet =
@@ -213,16 +223,10 @@ trait FilteringOps
     val recordingDates =
       therapies.map(th => YearMonth.from(th.recordedOn))
 
-/*
-    val medications =
-      therapies.flatMap {
-        case th: StartedMolecularTherapy => th.medication.getOrElse(List.empty)
-        case _                           => List.empty
-      }
-*/
 
     val medications =
-      therapies.flatMap(_.medication.getOrElse(List.empty))
+      therapies
+        .flatMap(_.medication.getOrElse(Some(EmptyMedication)))
         .toList
         .distinctBy(_.code)
         .flatMap(toCoding)
@@ -326,7 +330,12 @@ trait FilteringOps
       
       recommendation.priority.fold(true)(filter.priority.isSelected(_)) &&
       recommendation.levelOfEvidence.map(_.grading.code).fold(true)(filter.levelOfEvidence.isSelected(_)) &&
-      recommendation.medication.fold(true)(_.exists(c => selectedMedicationCodes.contains(c.code)))
+      recommendation.medication
+        .fold(
+          selectedMedicationCodes.contains(EmptyMedication.code)
+        )(
+          _.exists(c => selectedMedicationCodes.contains(c.code))
+        )
 
   }
 
@@ -340,21 +349,18 @@ trait FilteringOps
       val responses: Seq[RECIST.Value] = 
         filter.response.selectedValues.map(_.code)
       
-      val selectedMedications: Seq[Medication.Code] =
+      val selectedMedicationCodes: Seq[Medication.Code] =
         filter.medication.selectedValues.map(_.code)
       
       filter.status.selectedValues.map(_.code).contains(therapy.status) &&
       filter.recordingDate.contains(YearMonth.from(therapy.recordedOn)) &&
-      therapy.medication.fold(true)(_.exists(c => selectedMedications.contains(c.code))) &&
+      therapy.medication
+        .fold(
+          selectedMedicationCodes.contains(EmptyMedication.code)
+        )(
+          _.exists(c => selectedMedicationCodes.contains(c.code))
+        ) &&
       response.map(_.value.code).fold(true)(responses.contains)
-/*      
-      (therapy match {
-        case th: StartedMolecularTherapy =>
-          th.medication.fold(true)(_.exists(c => selectedMedications.contains(c.code)))
-      
-        case _ => true
-      }) &&
-*/      
 
   }
 

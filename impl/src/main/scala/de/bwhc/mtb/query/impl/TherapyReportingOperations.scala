@@ -68,6 +68,7 @@ object ConceptCountOperations
       .groupMapReduce(_.concept)(identity)(_ + _)
       .values
       .toSeq
+      .sortWith(_.count > _.count)
 
 }
 
@@ -253,6 +254,12 @@ trait TherapyReportingOperations
         .values
         .map {
           codings =>
+            // Treat ICD-10 codings with same code but different version
+            // as being conceptually continuous across subsequent versions,
+            // i.e. being the same entry at the version maximum (i.e. latest version),
+            // to avoid seeming duplication by having
+            // e.g. ICD-10 (code,2020), (code,2021), (code,2022) 
+            // in different "bins", and instead count them as all being (code,2022)
             val maxByVersion =
               codings.maxBy(_.version.getOrElse(icd10catalogs.latestVersion))(ICD10VersionOrder)
 
@@ -317,7 +324,7 @@ trait TherapyReportingOperations
           codes => 
             therapy => therapy.medication match {
               case Some(meds) => meds.exists(med => codes.contains(med.code))
-              case None => false
+              case None       => false
             }
         )
         .getOrElse(th => true)

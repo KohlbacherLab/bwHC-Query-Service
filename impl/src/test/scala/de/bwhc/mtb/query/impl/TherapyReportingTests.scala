@@ -2,6 +2,7 @@ package de.bwhc.mtb.query.impl
 
 
 import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.Inspectors._
 import org.scalatest.matchers.{
   BeMatcher,
   MatchResult
@@ -25,6 +26,7 @@ import de.bwhc.mtb.dtos.{
 }
 import de.ekut.tbi.generators.Gen
 import de.bwhc.mtb.dto.gens._
+import de.bwhc.mtb.dto.extensions.CodingExtensions._
 import play.api.libs.json.Json
 
 
@@ -176,7 +178,7 @@ class TherapyReportingTests extends AnyFlatSpec
 
   }
 
-
+/*
   "Compiled PatientTherapies" must "not be empty" in {
 
     val patientTherapiesReport =
@@ -187,7 +189,7 @@ class TherapyReportingTests extends AnyFlatSpec
         Report.Filters(
           Some(
             Medication.Coding(
-              code = Medication.Code("L01XX"),
+              code = Medication.Code("L01XC"),
               system = Medication.System.ATC,
               display = None,
               version = Some("2020")
@@ -199,6 +201,38 @@ class TherapyReportingTests extends AnyFlatSpec
     patientTherapiesReport.data must not be (empty)  
 
   }
+*/
 
+  "Compiled PatientTherapies" must "not be empty" in {
+
+    val cohort = mtbfiles(100)
+
+    val medications =
+      cohort
+        .flatMap(_.molecularTherapies.getOrElse(List.empty))
+        .map(_.history.maxBy(_.recordedOn))
+        .flatMap(_.medication.getOrElse(List.empty))
+        .distinctBy(_.code)
+
+    val medicationGroups =
+      medications.flatMap(_.medicationGroup)
+        .distinctBy(_.code)
+        
+    forAll(medicationGroups ++ medications){
+      medication =>
+
+        val patientTherapiesReport =
+          toPatientTherapies(
+            zpm, cohort
+          )(
+            Report.Filters(
+              Some(medication)
+            )
+          )
+
+      patientTherapiesReport.data must not be (empty)  
+    }
+
+  }
 
 }

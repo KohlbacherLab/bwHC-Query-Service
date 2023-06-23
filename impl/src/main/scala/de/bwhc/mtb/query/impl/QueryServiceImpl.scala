@@ -454,6 +454,7 @@ with FilteringOps
       )
       .recover {
         case t =>
+          log.error("Problem compiling local Tumor Entity Distribution Report", t)
           t.getMessage.leftNel[LocalDistributionReport[Coding[ICD10GM]]]
       }  
 
@@ -522,7 +523,8 @@ Medication filter: ${medication.map(_.code.value).getOrElse("-")}"""
              Query.MedicationWithUsage(
                Coding(
                  coding.code,
-                 None
+                 None,
+                 coding.version
                ),
                Set(Coding(Query.DrugUsage.Used))
              )
