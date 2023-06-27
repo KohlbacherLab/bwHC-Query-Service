@@ -586,7 +586,7 @@ Medication filter: ${medication.map(_.code.value).getOrElse("-")}"""
               GlobalReport(
                 LocalDateTime.now,
                 parts.map(_.site).toList,
-                request.body,
+                parts.head.filters,   // ensure one of the filters with completed medication coding is used
                 parts.flatMap(_.data),
                 None
               )
