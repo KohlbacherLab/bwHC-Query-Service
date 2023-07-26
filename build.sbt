@@ -144,8 +144,10 @@ lazy val dependencies =
   new {
     val scalatest          = "org.scalatest"          %% "scalatest"               % "3.1.1" % Test
     val slf4j              = "org.slf4j"              %  "slf4j-api"               % "1.7.32"
-    val play_ws_client     = "com.typesafe.play"      %% "play-ahc-ws-standalone"  % "2.1.2"
-    val play_ws_json       = "com.typesafe.play"      %% "play-ws-standalone-json" % "2.1.2"
+    val play_ws_client     = "com.typesafe.play"      %% "play-ahc-ws-standalone"  % "2.1.3"
+    val play_ws_json       = "com.typesafe.play"      %% "play-ws-standalone-json" % "2.1.3"
+//    val play_ws_client     = "com.typesafe.play"      %% "play-ahc-ws-standalone"  % "2.1.2"
+//    val play_ws_json       = "com.typesafe.play"      %% "play-ws-standalone-json" % "2.1.2"
     val scala_xml          = "org.scala-lang.modules" %% "scala-xml"               % "2.0.0"
     val repo_utils         = "de.ekut.tbi"            %% "repository-utils"        % "1.0-SNAPSHOT"
     val bwhc_utils         = "de.bwhc"                %% "utils"                   % "1.1"

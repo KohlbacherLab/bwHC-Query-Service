@@ -154,7 +154,8 @@ trait FilteringOps
 
 
   private def DefaultTherapyRecommendationFilter(
-    mtbfiles: Iterable[MTBFile]
+    mtbfiles: Iterable[MTBFile],
+    queriedMedications: List[Coding[Medication.Code]]
   )(
     implicit catalog: MedicationCatalog
   ): Query.TherapyRecommendationFilter = {
@@ -197,7 +198,13 @@ trait FilteringOps
       Selection(
         "Empfohlene Medikationen",
         medications
-          .map(coding => Selection.Item(coding,true))
+          .map(coding =>
+            Selection.Item(
+              coding,
+              queriedMedications.isEmpty || queriedMedications.exists(_.code == coding.code)
+            )
+          )
+//          .map(coding => Selection.Item(coding,true))
       )  
     )
 
@@ -205,7 +212,8 @@ trait FilteringOps
 
 
   private def DefaultMolecularTherapyFilter(
-    mtbfiles: Iterable[MTBFile]
+    mtbfiles: Iterable[MTBFile],
+    queriedMedications: List[Coding[Medication.Code]]
   )(
     implicit catalog: MedicationCatalog
   ): Query.MolecularTherapyFilter = {
@@ -248,7 +256,13 @@ trait FilteringOps
       Selection(
         "Verabreichte Medikationen",
         medications
-          .map(coding => Selection.Item(coding,true))
+          .map(coding =>
+            Selection.Item(
+              coding,
+              queriedMedications.isEmpty || queriedMedications.exists(_.code == coding.code)
+            )
+          )
+//          .map(coding => Selection.Item(coding,true))
       ),
       Selection(
         "Response",
@@ -261,7 +275,8 @@ trait FilteringOps
 
 
   def DefaultFilters(
-    mtbfiles: Iterable[MTBFile]
+    mtbfiles: Iterable[MTBFile],
+    parameters: Query.Parameters
   )(
     implicit catalog: MedicationCatalog
   ): Query.Filters = {
@@ -269,8 +284,32 @@ trait FilteringOps
     Query.Filters(
       DefaultPatientFilter(mtbfiles),
       DefaultNGSSummaryFilter(mtbfiles),
-      DefaultTherapyRecommendationFilter(mtbfiles),
-      DefaultMolecularTherapyFilter(mtbfiles)
+//      DefaultTherapyRecommendationFilter(mtbfiles),
+//      DefaultMolecularTherapyFilter(mtbfiles)
+      DefaultTherapyRecommendationFilter(
+        mtbfiles,
+        parameters
+          .medicationsWithUsage
+          .getOrElse(List.empty)
+          .filter { mwu => 
+            val usage = mwu.usage
+             
+            usage.isEmpty || usage.map(_.code).contains(Query.DrugUsage.Recommended)
+          }
+          .map(_.medication)
+      ),
+      DefaultMolecularTherapyFilter(
+        mtbfiles,
+        parameters
+          .medicationsWithUsage
+          .getOrElse(List.empty)
+          .filter { mwu => 
+            val usage = mwu.usage
+             
+            usage.isEmpty || usage.map(_.code).contains(Query.DrugUsage.Used)
+          }
+          .map(_.medication)
+      )
     )
 
   }

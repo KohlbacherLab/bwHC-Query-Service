@@ -767,7 +767,8 @@ Medication filter: ${medication.map(_.code.value).getOrElse("-")}"""
                     Instant.now,
                     mode.withDisplay,
                     validatedParams,
-                    DefaultFilters(results.map(_.data)),
+//                    DefaultFilters(results.map(_.data)),
+                    DefaultFilters(results.map(_.data),params),
                     zpms,
                     Instant.now
                   )
@@ -819,8 +820,14 @@ Medication filter: ${medication.map(_.code.value).getOrElse("-")}"""
                   
                       query =
                         updatedQuery.copy(
-                          filters = DefaultFilters(results.map(_.data)),
-                          zpms = results.foldLeft(Set.empty[ZPM])((acc,snp) => acc + snp.data.patient.managingZPM.get)
+//                          filters = DefaultFilters(results.map(_.data)),
+                          filters =
+                            DefaultFilters(
+                              results.map(_.data),
+                              updatedQuery.parameters
+                            ),
+                          zpms =
+                            results.foldLeft(Set.empty[ZPM])((acc,snp) => acc + snp.data.patient.managingZPM.get)
                         )
                   
                       _ = queryCache.update(query -> results)
