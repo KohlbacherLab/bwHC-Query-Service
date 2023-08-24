@@ -53,6 +53,7 @@ final case class Query
   parameters: Query.Parameters,
   filters: Query.Filters,
   zpms: Set[ZPM],
+  expiresIn: Int,
   lastUpdate: Instant
 )
 

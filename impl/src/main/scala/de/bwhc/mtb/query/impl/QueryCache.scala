@@ -1,15 +1,13 @@
 package de.bwhc.mtb.query.impl
 
 
-
+import java.time.Instant
 import scala.concurrent.{
   ExecutionContext,
   Future
 }
-
 import de.bwhc.util.Logging
 import de.bwhc.util.spi._
-
 import de.bwhc.mtb.query.api.{
   extensions,
   VitalStatus,
@@ -36,6 +34,7 @@ trait QueryCache
   type Snapshots = Iterable[Snapshot[MTBFile]]
   type ResultSet = Iterable[MTBFile]
 
+  val cachingSeconds: Int
 
   def newQueryId: Query.Id
 
@@ -100,6 +99,9 @@ with Logging
     TrieMap.empty[Query.Id,Snapshots]
 
 
+  override val cachingSeconds: Int = 600
+
+
   //---------------------------------------------------------------------------
   // Scheduled clean-up task of cached data
   //---------------------------------------------------------------------------
@@ -113,7 +115,7 @@ with Logging
 
       val timedOutQueryIds =
         queries.values
-          .filter(_.lastUpdate isBefore Instant.now.minusSeconds(600)) // 10 min timeout limit
+          .filter(_.lastUpdate isBefore Instant.now.minusSeconds(cachingSeconds)) // 10 min timeout limit
           .map(_.id)
 
       if (timedOutQueryIds.nonEmpty){
@@ -141,8 +143,14 @@ with Logging
   //---------------------------------------------------------------------------
 
 
-  override def newQueryId: Query.Id = Query.Id(randomUUID.toString)
-  
+  override def newQueryId: Query.Id =
+    Query.Id(randomUUID.toString)
+ 
+
+  private val touch: Query => Query =
+    _.copy(lastUpdate = Instant.now)
+
+
 
   override def +=(
     qr: (Query,Snapshots)
@@ -150,8 +158,9 @@ with Logging
 
     val (query,results) = qr
 
-    queries    += (query.id -> query)
-    resultSets += (query.id -> results)
+    queries    += query.id -> touch(query)
+    resultSets += query.id -> results
+
   }
 
 
@@ -159,12 +168,9 @@ with Logging
     query: Query
   ): Unit = {
 
-    for {
-      q  <- queries.put(query.id,query)
-    } yield ()
- 
-  }
+    queries += query.id -> touch(query)
 
+  }
 
   override def update(
     qr: (Query,Snapshots)
@@ -172,22 +178,28 @@ with Logging
 
     val (query,results) = qr
 
-    queries.put(query.id,query)
-    resultSets.put(query.id,results)
- 
+    queries += query.id -> touch(query)
+    resultSets += query.id -> results
+
   }
 
 
   override def get(
     id: Query.Id,
   ): Option[Query] = {
-    queries.get(id)
+
+    // return the 'touched' query object
+    queries.updateWith(id)(_.map(touch))
+
   }
 
 
   override def resultsOf(
     id: Query.Id,
   ): Option[ResultSet] = {
+
+    get(id) // ensure query object is 'touched'
+
     for {
       rs <- resultSets.get(id)
     } yield rs.map(_.data)
