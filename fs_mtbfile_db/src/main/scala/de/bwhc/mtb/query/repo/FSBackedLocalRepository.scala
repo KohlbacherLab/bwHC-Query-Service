@@ -79,17 +79,78 @@ object FSBackedLocalDB
 
     if (!dataDir.exists) dataDir.mkdirs
 
+    val initData: Map[Patient.Id,Snapshot[MTBFile]] =
+      Option {
+        dataDir.listFiles(
+          (_,name) =>
+            (name startsWith "Patient_") && (name endsWith ".json")
+        )
+        .to(LazyList)
+        .map(toFileInputStream)
+        .map(Json.parse)
+        .map(Json.fromJson[Snapshot[MTBFile]](_))
+        .map(_.get)
+      }
+      //------------------------------------------------------
+      // In case there are no REAL imported MTBFiles,
+      // compensate with a bit of random-generated in-memory data 
+      .filter(_.nonEmpty)
+      .orElse {
+
+        for {
+          nGen <-
+            Option(System.getProperty("bwhc.query.data.generate"))
+              .map(_.toInt)
+              .filter(_ > 0)
+
+          localSite <-
+            Option(System.getProperty("bwhc.zpm.site"))
+              .map(ZPM(_))
+
+        } yield LazyList.fill(nGen)(Gen.of[Snapshot[MTBFile]].next)
+          .map { snp =>
+            val mtbfile = snp.data
+            snp.copy(data = mtbfile.copy(patient = mtbfile.patient.copy(managingZPM = Some(localSite))))
+          }
+      }
+      .getOrElse(LazyList.empty)
+      //------------------------------------------------------
+      .foldLeft(
+        TrieMap.empty[Patient.Id,Snapshot[MTBFile]]
+      ){
+        (acc,snp) =>
+
+          acc.updateWith(snp.data.patient.id){
+
+            case Some(s) =>
+              if (s.timestamp isBefore snp.timestamp)
+                Some(snp)
+              else
+                Some(s)
+
+            case None => Some(snp)
+          }
+          acc
+
+      }
+
+    new FSBackedLocalDB(
+      dataDir,
+      initData
+    )
+
+/*
     val initData: Seq[(Patient.Id,Snapshot[MTBFile])] =
       Option {
         dataDir.listFiles(
           (_,name) =>
             (name startsWith "Patient_") && (name endsWith ".json")
         )
-          .to(LazyList)
-          .map(toFileInputStream)
-          .map(Json.parse)
-          .map(Json.fromJson[Snapshot[MTBFile]](_))
-          .map(_.get)
+        .to(LazyList)
+        .map(toFileInputStream)
+        .map(Json.parse)
+        .map(Json.fromJson[Snapshot[MTBFile]](_))
+        .map(_.get)
       }
       //------------------------------------------------------
       // In case there are no REAL imported MTBFiles,
@@ -97,9 +158,11 @@ object FSBackedLocalDB
       .filterNot(_.isEmpty)
       .getOrElse {
 
-        val defaultN  = Option(System.getProperty("bwhc.query.data.generate")).map(_.toInt).getOrElse(0) 
+        val defaultN =
+          Option(System.getProperty("bwhc.query.data.generate")).map(_.toInt).getOrElse(0) 
 
-        val localSite = Option(System.getProperty("bwhc.zpm.site")).map(ZPM(_)).get
+        val localSite =
+          Option(System.getProperty("bwhc.zpm.site")).map(ZPM(_)).get
 
         LazyList.fill(defaultN)(Gen.of[Snapshot[MTBFile]].next)
           .map { snp =>
@@ -110,7 +173,6 @@ object FSBackedLocalDB
       //------------------------------------------------------
       .groupBy(_.data.patient.id)
       .view
-      // sort Snapshots in DECREASING order of timestamp, i.e. to have MOST RECENT as head
       .mapValues(_.maxBy(_.timestamp)) // get most recent snapshot
       .toSeq
 
@@ -119,6 +181,7 @@ object FSBackedLocalDB
       TrieMap(initData: _*) 
     )
 
+*/
   }
 
 
@@ -128,60 +191,6 @@ object FSBackedLocalDB
 
   import scala.language.implicitConversions
 
-/*
-  implicit def snvParametersToPredicate(params: SNVParameters): SimpleVariant => Boolean = {
-  
-    snv =>
-
-      import SimpleVariant.{DNAChange,AminoAcidChange}
-
-      snv.gene.flatMap(_.hgncId).exists(_.value equalsIgnoreCase params.gene.code.value) &&
-        params.dnaChange.fold(true)(
-          pttrn => snv.dnaChange.exists(_.code.value contains pttrn.value)
-        ) &&
-        params.aminoAcidChange.fold(true)(
-          pttrn => snv.aminoAcidChange.exists(_.code.value contains pttrn.value)
-        )
-  }
-
-
-  implicit def cnvParametersToPredicate(params: CNVParameters): CNV => Boolean = {
-    cnv =>
-
-      val affectedGeneIds = 
-        cnv.reportedAffectedGenes.getOrElse(List.empty).flatMap(_.hgncId.toList).map(_.value)
- 
-      params.genes.map(_.code.value).forall(affectedGeneIds.contains) &&
-        params.`type`.fold(true)(_ == cnv.`type`) &&
-          params.copyNumber.fold(true)(range => cnv.totalCopyNumber.exists(range.contains))
-  }
-
-
-  implicit def fusionParametersToDNAFusionPredicate(params: FusionParameters): DNAFusion => Boolean = {
-    dna =>
-
-      params.fivePrimeGene.fold(true)(
-        gene => dna.fusionPartner5prime.flatMap(_.gene.hgncId).exists(_.value == gene.code.value)
-      ) &&
-        params.threePrimeGene.fold(true)(
-          gene => dna.fusionPartner3prime.flatMap(_.gene.hgncId).exists(_.value == gene.code.value)
-        ) 
-
-  }
-
-
-  implicit def fusionParametersToRNAFusionPredicate(params: FusionParameters): RNAFusion => Boolean = {
-    rna =>
-
-      params.fivePrimeGene.fold(true)(
-        gene => rna.fusionPartner5prime.flatMap(_.gene.hgncId).exists(_.value == gene.code.value)
-      ) &&
-        params.threePrimeGene.fold(true)(
-          gene => rna.fusionPartner3prime.flatMap(_.gene.hgncId).exists(_.value == gene.code.value)
-        ) 
-
-  }
-*/
   
   implicit def toPredicate(params: Parameters): Snapshot[MTBFile] => Boolean = {
 

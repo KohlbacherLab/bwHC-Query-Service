@@ -12,7 +12,8 @@ import de.bwhc.mtb.query.api.{
   ConceptCount,
   Report,
   LocalReport,
-  GlobalReport
+  GlobalReport,
+  Query
 }
 import de.bwhc.mtb.query.api.ReportingAliases._
 import de.bwhc.catalogs.med.MedicationCatalog
@@ -120,7 +121,7 @@ class TherapyReportingTests extends AnyFlatSpec
   "Compiled LocalMedicationDistributionReport" must "have been valid" in {
 
     val report =
-      toLocalMedicationDistributionReport(zpm,mtbfiles(50))
+      toLocalMedicationDistributionReport(zpm,mtbfiles(50),Query.DrugUsage.Used)
 
     report must be (validMedicationReport)
   }
@@ -131,7 +132,7 @@ class TherapyReportingTests extends AnyFlatSpec
     val report =
       List.fill(4)(mtbfiles(50))
         .map(
-          toLocalMedicationDistributionReport(zpm,_)
+          toLocalMedicationDistributionReport(zpm,_,Query.DrugUsage.Used)
         )
         .combineToGlobalReport
 
@@ -226,7 +227,8 @@ class TherapyReportingTests extends AnyFlatSpec
             zpm, cohort
           )(
             Report.Filters(
-              Some(medication)
+              Some(medication),
+              None
             )
           )
 

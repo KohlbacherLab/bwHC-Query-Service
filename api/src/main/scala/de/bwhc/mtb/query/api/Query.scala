@@ -89,7 +89,7 @@ object Query
   }
 
 
-  object DrugUsage  extends Enumeration
+  object DrugUsage extends Enumeration
   {
     val Used        = Value("used")
     val Recommended = Value("recommended")

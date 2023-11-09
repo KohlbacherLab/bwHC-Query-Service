@@ -20,6 +20,7 @@ import de.bwhc.mtb.query.api.{
   PatientTherapies,
   TherapyWithResponse
 }
+import de.bwhc.mtb.query.api.Query.DrugUsage
 import de.bwhc.mtb.query.api.ReportingAliases._
 import de.bwhc.catalogs.med.{
   MedicationCatalog => ATCCatalog,
@@ -112,7 +113,8 @@ trait TherapyReportingOperations
 
   def toLocalMedicationDistributionReport(
     site: ZPM,
-    mtbfiles: Iterable[MTBFile]
+    mtbfiles: Iterable[MTBFile],
+    usage: DrugUsage.Value
   )(
     implicit 
     atcCatalogs: ATCCatalog
@@ -120,7 +122,36 @@ trait TherapyReportingOperations
 
     import scala.collection.mutable.Map
 
+    val medications =
+      usage match {
+
+        case DrugUsage.Recommended =>
+          mtbfiles.flatMap(
+            _.recommendations
+             .getOrElse(List.empty)
+             .flatMap(
+               _.medication
+                .getOrElse(List.empty)
+                .filter(_.system == Medication.System.ATC)
+             )
+          )
+
+        case DrugUsage.Used =>
+          mtbfiles.flatMap(
+            _.molecularTherapies
+             .getOrElse(List.empty)
+             .map(_.history.maxBy(_.recordedOn))
+             .flatMap(
+               _.medication
+                .getOrElse(List.empty)
+                .filter(_.system == Medication.System.ATC)
+             )
+          )
+      }
+
+
     val conceptCounts =
+      /*
       mtbfiles.flatMap(
         _.molecularTherapies
          .getOrElse(List.empty)
@@ -131,6 +162,8 @@ trait TherapyReportingOperations
             .filter(_.system == Medication.System.ATC)
          )
       )
+      */
+      medications
       .groupBy(_.code)
       .values
       .map {
@@ -177,7 +210,10 @@ trait TherapyReportingOperations
     LocalReport[Distribution[Medication.Coding]](
       LocalDateTime.now,
       site,
-      Report.Filters.empty,
+      Report.Filters(
+        None,
+        Some(usage)
+      ),
       conceptCounts
     )
 

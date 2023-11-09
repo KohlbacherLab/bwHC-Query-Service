@@ -376,16 +376,25 @@ with FilteringOps
     ec: ExecutionContext
   ): Future[Either[NonEmptyList[String],LocalDistributionReport[Medication.Coding]]] = {
 
-    val PeerToPeerRequest(origin,querier,_,_) = request
+    val PeerToPeerRequest(origin,querier,filter,_) = request
 
-    log.info(s"Compiling Local Medication Distribution Report for Querier: ${querier.value}, Origin: ${origin.value}")
+    val medicationUsage =
+      filter.medicationUsage.getOrElse(Query.DrugUsage.Used)
+
+    log.info(
+s"""Compiling Local Medication Distribution Report for
+Querier: ${querier.value}
+Origin: ${origin.value}
+Medication usage: $medicationUsage"""
+    )
 
     db.latestSnapshots
       .map(
         snapshots =>
           toLocalMedicationDistributionReport(
             localSite,
-            snapshots.map(_.data)
+            snapshots.map(_.data),
+            medicationUsage
           )
           .rightNel[String]
       )
@@ -397,6 +406,8 @@ with FilteringOps
 
 
   override def compileGlobalMedicationDistribution(
+    usage: Option[Query.DrugUsage.Value]
+  )(
     implicit
     querier: Querier,
     ec: ExecutionContext
@@ -404,10 +415,20 @@ with FilteringOps
     
     import DistributionReportOperations._
 
-    log.info(s"Compiling Global Medication Distribution Report for Querier: ${querier.value}")
+    val medicationUsage =
+      usage.orElse(Some(Query.DrugUsage.Used))
+
+    log.info(s"Compiling Global Medication Distribution Report for Querier: ${querier.value}, medication usage: $medicationUsage")
 
     val request =
-      PeerToPeerRequest(localSite,querier,Report.Filters.empty)
+      PeerToPeerRequest(
+        localSite,
+        querier,
+        Report.Filters(
+          None,
+          medicationUsage
+        )
+      )
 
     val externalReports =
       bwHC.requestMedicationDistributionReports(request)
@@ -486,7 +507,7 @@ Medication filter: ${medication.map(_.code.value).getOrElse("-")}"""
       case Valid(_) =>
 
         val request =
-          PeerToPeerRequest(localSite,querier,Report.Filters(medication))
+          PeerToPeerRequest(localSite,querier,Report.Filters(medication,None))
         
         val externalReports =
           bwHC.requestTumorEntityDistributionReports(request)
@@ -567,7 +588,7 @@ Medication filter: ${medication.map(_.code.value).getOrElse("-")}"""
       case Valid(_) =>
 
         val request =
-           PeerToPeerRequest(localSite,querier,Report.Filters(medication))
+           PeerToPeerRequest(localSite,querier,Report.Filters(medication,None))
         
         val externalData =
           bwHC.requestPatientTherapies(request)

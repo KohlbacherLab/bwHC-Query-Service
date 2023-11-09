@@ -188,7 +188,7 @@ object ParameterValidation extends Validator[String,Parameters]
 
   implicit val reportFiltersValidator: Validator[String,Report.Filters] = {
 
-    case filters @ Report.Filters(optMedication) =>
+    case filters @ Report.Filters(optMedication,_) =>
 
       import cats.syntax.validated._
 

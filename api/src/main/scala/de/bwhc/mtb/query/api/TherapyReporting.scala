@@ -77,32 +77,20 @@ object Report
 
   final case class Filters
   (
-    medication: Option[Medication.Coding]
+    medication: Option[Medication.Coding],
+    medicationUsage: Option[Query.DrugUsage.Value]
   )
 
   object Filters
   {
 
-    val empty = Filters(None)
+    val empty =
+      Filters(None,None)
 
     implicit val format =
       Json.format[Filters]
   }
 
-/*
-  implicit def format[T] =
-    Format[Report[T]](
-      Reads(
-        js =>
-          js.validate[LocalReport[T]]
-            .orElse(js.validate[GlobalReport[T]])
-      ),
-      Writes { 
-        case r: LocalReport[T] => Json.toJson(r)
-        case r: LocalReport[T] => Json.toJson(r)
-      }
-    )
-*/
 }
 
 
@@ -292,6 +280,8 @@ trait TherapyReportingOps
 
   
   def compileGlobalMedicationDistribution(
+    medicationUsage: Option[Query.DrugUsage.Value]
+  )(
     implicit
     querier: Querier,
     ec: ExecutionContext
