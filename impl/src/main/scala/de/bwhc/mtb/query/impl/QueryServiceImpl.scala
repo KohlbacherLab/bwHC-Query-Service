@@ -774,10 +774,14 @@ Medication filter: ${medication.map(_.code.value).getOrElse("-")}"""
           case Valid(validatedParams) => {
 
             val queryId = queryCache.newQueryId
-            
+           
+            val expandedParams = ParameterProcessor(validatedParams)
             (
               for {
-                results <- IorT(submitQuery(queryId,querier,mode.code,params))
+                results <-
+                  IorT(
+                    submitQuery(queryId,querier,mode.code,expandedParams)
+                  )
 
                 zpms = results.foldLeft(Set.empty[ZPM])((acc,snp) => acc + snp.data.patient.managingZPM.get)
 
@@ -788,7 +792,7 @@ Medication filter: ${medication.map(_.code.value).getOrElse("-")}"""
                     Instant.now,
                     mode.withDisplay,
                     validatedParams,
-                    DefaultFilters(results.map(_.data),params),
+                    DefaultFilters(results.map(_.data),expandedParams),
                     zpms,
                     queryCache.cachingSeconds,
                     Instant.now
@@ -832,19 +836,25 @@ Medication filter: ${medication.map(_.code.value).getOrElse("-")}"""
                     lastUpdate = Instant.now
                   )
 
+
                 if (oldQuery.mode.code != updatedQuery.mode.code ||
-                    oldQuery.parameters != updatedQuery.parameters)
+                    oldQuery.parameters != updatedQuery.parameters){
+
+                  val expandedParams = ParameterProcessor(validatedParams)
 
                   (
                     for {
-                      results <- IorT(submitQuery(id,oldQuery.querier,updatedQuery.mode.code,updatedQuery.parameters))
+                      results <-
+                        IorT(
+                          submitQuery(id,oldQuery.querier,updatedQuery.mode.code,expandedParams)
+                        )
                   
                       query =
                         updatedQuery.copy(
                           filters =
                             DefaultFilters(
                               results.map(_.data),
-                              updatedQuery.parameters
+                              expandedParams
                             ),
                           zpms =
                             results.foldLeft(Set.empty[ZPM])((acc,snp) => acc + snp.data.patient.managingZPM.get),
@@ -858,7 +868,7 @@ Medication filter: ${medication.map(_.code.value).getOrElse("-")}"""
                   )
                   .value
                     
-                else
+                } else
                   Future.successful(updatedQuery).andThen {
                     case Success(q) => queryCache.update(q)
                   }
@@ -1372,7 +1382,8 @@ Medication filter: ${medication.map(_.code.value).getOrElse("-")}"""
 
     log.info(s"Processing external peer-to-peer MTBFile Query from ${query.origin} \nQuery: \n${formattedJson(query)}") 
 
-    db.findMatching(ParameterProcessor(query.body)) andThen {
+//    db.findMatching(ParameterProcessor(query.body)) andThen {
+    db.findMatching(query.body) andThen {
       case Success(snps) => {
         val resultIds =
           snps.map(snp => ResultIds(snp.data.patient.id,snp.id))

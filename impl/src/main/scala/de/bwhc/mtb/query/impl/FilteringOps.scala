@@ -26,10 +26,15 @@ import de.bwhc.mtb.dtos.{
 }
 import de.bwhc.catalogs.med.MedicationCatalog
 
+import play.api.libs.json.Writes
+import play.api.libs.json.Json.{prettyPrint,toJson}
 
 
 trait FilteringOps
 {
+
+  import scala.util.chaining._
+
 
   def DefaultPatientFilter(
     mtbfiles: Iterable[MTBFile]
@@ -123,20 +128,27 @@ trait FilteringOps
     case Medication.Coding(code,system,display,version) =>
 
       system match {
+
         case Medication.System.ATC =>
           catalog.findWithCode(
             code.value,
-            version.get
+            version.getOrElse(catalog.latestVersion)
           )
           .map(
             med =>
-              Coding(Medication.Code(med.code.value),Some(med.name))
+              Coding(
+                Medication.Code(med.code.value),
+                Some(med.name),
+                version
+              )
           )
+
         case Medication.System.Unregistered =>
           Some(
             Coding(
               code,
-              display.orElse(Some("N/A"))
+              display.orElse(Some("N/A")),
+              version
             )
           )
       }
@@ -166,13 +178,21 @@ trait FilteringOps
       mtbfiles.flatMap(_.recommendations.getOrElse(List.empty))
         .toList
 
-
     val medications =
       recommendations
-        .flatMap(_.medication.getOrElse(Some(EmptyMedication)))
-        .distinctBy(_.code)
-        .flatMap(toCoding)
         .toList
+        .flatMap(_.medication.getOrElse(List.empty))
+        .distinctBy(_.code)
+        .sortBy(_.code.value)
+        .pipe(
+          meds =>
+            if (recommendations.exists(_.medication.isEmpty))
+              EmptyMedication :: meds
+            else
+              meds
+        )
+        .flatMap(toCoding)
+        
 
 
     val priorities =
@@ -204,7 +224,6 @@ trait FilteringOps
               queriedMedications.isEmpty || queriedMedications.exists(_.code == coding.code)
             )
           )
-//          .map(coding => Selection.Item(coding,true))
       )  
     )
 
@@ -234,9 +253,17 @@ trait FilteringOps
 
     val medications =
       therapies
-        .flatMap(_.medication.getOrElse(Some(EmptyMedication)))
         .toList
+        .flatMap(_.medication.getOrElse(List.empty))
         .distinctBy(_.code)
+        .sortBy(_.code.value)
+        .pipe(
+          meds =>
+            if (therapies.exists(_.medication.isEmpty))
+              EmptyMedication :: meds
+            else
+              meds
+        )
         .flatMap(toCoding)
 
     val responses =
@@ -262,7 +289,6 @@ trait FilteringOps
               queriedMedications.isEmpty || queriedMedications.exists(_.code == coding.code)
             )
           )
-//          .map(coding => Selection.Item(coding,true))
       ),
       Selection(
         "Response",
@@ -284,8 +310,6 @@ trait FilteringOps
     Query.Filters(
       DefaultPatientFilter(mtbfiles),
       DefaultNGSSummaryFilter(mtbfiles),
-//      DefaultTherapyRecommendationFilter(mtbfiles),
-//      DefaultMolecularTherapyFilter(mtbfiles)
       DefaultTherapyRecommendationFilter(
         mtbfiles,
         parameters

@@ -141,7 +141,10 @@ object ParameterValidation extends Validator[String,Parameters]
 
   implicit val icdO3McodingValidator: Validator[String,Coding[ICDO3M]] = {
     coding =>
-      icdO3.morphologyCodings().find(_.code.value == coding.code.value) mustBe defined otherwise (
+      icdO3.morphologyCodings(
+        coding.version.getOrElse(icdO3.currentVersion)
+      )
+      .find(_.code.value == coding.code.value) mustBe defined otherwise (
         s"Invalid ICD-O-3-M code ${coding.code.value}"
       ) map (
         _ => coding.complete
@@ -168,7 +171,7 @@ object ParameterValidation extends Validator[String,Parameters]
     case coding @ Medication.Coding(Medication.Code(code),_,_,version) =>
 
       version mustBe defined otherwise (
-        "Missing ATC version: Required for code resultion"
+        "Missing ATC version: Required for code resolution"
       ) map (_.get) andThen {
         v =>
           val versions = atc.availableVersions.map(_.toString)
@@ -210,7 +213,10 @@ object ParameterValidation extends Validator[String,Parameters]
 
     case mwu @ MedicationWithUsage(medication,usageSet) =>
 
-      atc.findWithCode(medication.code.value,atc.latestVersion) mustBe defined otherwise (
+      atc.findWithCode(
+        medication.code.value,
+        medication.version.getOrElse(atc.latestVersion)
+      ) mustBe defined otherwise (
         s"Invalid ATC Medication code ${medication.code.value}"
       ) map (
        _.get

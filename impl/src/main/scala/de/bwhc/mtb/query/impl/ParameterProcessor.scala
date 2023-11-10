@@ -66,7 +66,7 @@ object ParameterProcessor extends (Parameters => Parameters)
               Medication.Coding(
                 medication.code,
                 Medication.System.ATC,
-                None,
+                medication.display,
                 medication.version
               )
             
@@ -75,7 +75,7 @@ object ParameterProcessor extends (Parameters => Parameters)
                 MedicationWithUsage(
                   Coding(
                     c.code,
-                    None,
+                    c.display,
                     c.version
                   ),
                   usage
@@ -83,58 +83,6 @@ object ParameterProcessor extends (Parameters => Parameters)
              )
         }
 
-/*
-    val expandedDiagnoses =
-      params.diagnoses
-        .getOrElse(List.empty)
-        .flatMap {
-          coding => 
-          
-          icd10s.find(_.code.value == coding.code.value)
-            .map(
-              _.subClasses
-               .map(c => Coding(ICD10GM(c.value),None))
-               .toList
-            )
-            .getOrElse(List.empty) :+ coding 
-
-        }
-
-    val expandedMorphologies =
-      params.tumorMorphology
-        .getOrElse(List.empty)
-        .flatMap {
-          coding => 
-          
-          icdO3ms.find(_.code.value == coding.code.value)
-            .map(
-              _.subClasses
-               .map(c => Coding(ICDO3M(c.value),None))
-               .toList
-            )
-            .getOrElse(List.empty) :+ coding
-
-        }
-
-    val expandedDrugs =
-      params.medicationsWithUsage
-        .getOrElse(List.empty)
-        .flatMap {
-          case coding @ MedicationWithUsage(medication,usage) =>
-         
-            atc.find(ATC.Code(medication.code.value),atc.latestVersion)
-              .map(
-                _.children.map( c =>
-                  MedicationWithUsage(
-                    Coding(Medication.Code(c.value),None),
-                    usage
-                  )
-                )
-                .toList
-              )
-              .getOrElse(List.empty) :+ coding
-        }
-*/
 
     params.copy(
       diagnoses = Some(expandedDiagnoses),
