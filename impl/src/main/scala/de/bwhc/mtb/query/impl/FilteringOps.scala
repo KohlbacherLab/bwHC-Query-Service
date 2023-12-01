@@ -175,7 +175,8 @@ trait FilteringOps
     import ValueSets._
 
     val recommendations =
-      mtbfiles.flatMap(_.recommendations.getOrElse(List.empty))
+      mtbfiles
+        .flatMap(_.recommendations.getOrElse(List.empty))
         .toList
 
     val medications =
@@ -196,11 +197,20 @@ trait FilteringOps
 
 
     val priorities =
-      recommendations.flatMap(_.priority)
+      recommendations
+        .flatMap(_.priority)
         .toSet
 
     val evidenceLevels =
-      recommendations.flatMap(_.levelOfEvidence.map(_.grading.code))
+      recommendations
+        .flatMap(_.levelOfEvidence.map(_.grading.code))
+        .pipe { 
+          loe =>
+            if (recommendations.exists(_.levelOfEvidence.isEmpty))
+              LevelOfEvidence.Grading.Undefined :: loe
+            else
+              loe
+        }
         .toSet
 
 
@@ -392,12 +402,19 @@ trait FilteringOps
         filter.medication.selectedValues.map(_.code)
       
       recommendation.priority.fold(true)(filter.priority.isSelected(_)) &&
-      recommendation.levelOfEvidence.map(_.grading.code).fold(true)(filter.levelOfEvidence.isSelected(_)) &&
+      filter.levelOfEvidence
+        .selectedValues
+        .contains(
+          recommendation
+            .levelOfEvidence
+            .map(_.grading.code)
+            .getOrElse(LevelOfEvidence.Grading.Undefined)
+        ) &&
       recommendation.medication
         .fold(
           selectedMedicationCodes.contains(EmptyMedication.code)
         )(
-          _.exists(c => selectedMedicationCodes.contains(c.code))
+          _.exists(c => selectedMedicationCodes contains c.code)
         )
 
   }
