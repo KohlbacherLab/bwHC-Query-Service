@@ -39,7 +39,7 @@ trait VariantFilteringOps
           pttrn => snv.dnaChange.exists(_.code.value contains pttrn.value)
         ) &&
         params.aminoAcidChange.fold(true)(
-          pttrn => snv.aminoAcidChange.exists(_.code.value contains pttrn.value)
+          pttrn => snv.aminoAcidChange.exists(_.code.value.toLowerCase contains pttrn.value.toLowerCase)
         )
   }
 

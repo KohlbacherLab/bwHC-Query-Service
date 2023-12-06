@@ -69,6 +69,7 @@ object ParameterProcessor extends (Parameters => Parameters)
                 medication.display,
                 medication.version
               )
+              .complete
             
             (coding :: coding.childSubstances.toList).map(
               c =>

@@ -9,7 +9,12 @@ import java.io.{
 }
 import java.time.Instant
 import java.util.UUID.randomUUID
-import scala.util.{Failure,Success,Using}
+import scala.util.{
+  Failure,
+  Success,
+  Using
+}
+import scala.util.chaining._
 import scala.concurrent.{
   Future,
   ExecutionContext
@@ -33,8 +38,8 @@ import de.bwhc.mtb.query.impl.{
   LocalDBProvider,
   VariantFilteringOps
 }
-
-
+import de.bwhc.catalogs.med.MedicationCatalog
+import de.bwhc.mtb.dto.extensions.CodingExtensions._
 
 
 class FSBackedLocalDBProvider
@@ -54,7 +59,8 @@ object FSBackedLocalDB
   private def toFileInputStream(f: File): InputStream =
     new FileInputStream(f)
 
-  private val dataDir = Option(System.getProperty("bwhc.query.data.dir")).map(new File(_)).get
+  private val dataDir =
+    Option(System.getProperty("bwhc.query.data.dir")).map(new File(_)).get
 
 
   //---------------------------------------------------------------------------
@@ -139,49 +145,6 @@ object FSBackedLocalDB
       initData
     )
 
-/*
-    val initData: Seq[(Patient.Id,Snapshot[MTBFile])] =
-      Option {
-        dataDir.listFiles(
-          (_,name) =>
-            (name startsWith "Patient_") && (name endsWith ".json")
-        )
-        .to(LazyList)
-        .map(toFileInputStream)
-        .map(Json.parse)
-        .map(Json.fromJson[Snapshot[MTBFile]](_))
-        .map(_.get)
-      }
-      //------------------------------------------------------
-      // In case there are no REAL imported MTBFiles,
-      // compensate with a bit of random-generated in-memory data 
-      .filterNot(_.isEmpty)
-      .getOrElse {
-
-        val defaultN =
-          Option(System.getProperty("bwhc.query.data.generate")).map(_.toInt).getOrElse(0) 
-
-        val localSite =
-          Option(System.getProperty("bwhc.zpm.site")).map(ZPM(_)).get
-
-        LazyList.fill(defaultN)(Gen.of[Snapshot[MTBFile]].next)
-          .map { snp =>
-            val mtbfile = snp.data
-            snp.copy(data = mtbfile.copy(patient = mtbfile.patient.copy(managingZPM = Some(localSite))))
-          }
-      }
-      //------------------------------------------------------
-      .groupBy(_.data.patient.id)
-      .view
-      .mapValues(_.maxBy(_.timestamp)) // get most recent snapshot
-      .toSeq
-
-    new FSBackedLocalDB(
-      dataDir,
-      TrieMap(initData: _*) 
-    )
-
-*/
   }
 
 
@@ -189,8 +152,11 @@ object FSBackedLocalDB
   import DrugUsage._
   import Gene.HgncId
 
-  import scala.language.implicitConversions
+  implicit val atc =
+    MedicationCatalog.getInstance.get
 
+
+  import scala.language.implicitConversions
   
   implicit def toPredicate(params: Parameters): Snapshot[MTBFile] => Boolean = {
 
@@ -212,6 +178,7 @@ object FSBackedLocalDB
       lazy val responsesSelection            = params.responses.getOrElse(List.empty).map(_.code)
       lazy val medicationsWithUsageSelection = params.medicationsWithUsage.getOrElse(List.empty)
 
+/*      
       val (
         anyUsageDrugSelection,
         recommendedDrugSelection,
@@ -250,6 +217,56 @@ object FSBackedLocalDB
           .map(_.medication.getOrElse(List.empty).toSet)
           .map(_.map(_.code))
           .fold(Set.empty[Medication.Code])(_ ++ _)
+*/
+
+      lazy val recommendedDrugs =
+        mtbfile.recommendations
+          .getOrElse(List.empty)
+          .flatMap(
+            _.medication
+             .getOrElse(List.empty)
+             .flatMap(_.complete.display)
+          )
+          .map(_.toLowerCase)
+          .toSet
+
+      lazy val usedDrugs =
+        mtbfile.molecularTherapies
+          .getOrElse(List.empty)
+          .flatMap(_.history.maxByOption(_.recordedOn))
+          .flatMap(
+            _.medication
+             .getOrElse(List.empty)
+             .flatMap(_.complete.display)
+          )
+          .map(_.toLowerCase)
+          .toSet
+
+      val medicationFulfilled =
+        params.medicationsWithUsage
+          .filter(_.nonEmpty)
+          .fold(true)(
+            _.exists {
+              case Query.MedicationWithUsage(med,usages) =>
+
+                usages.map(_.code).pipe {
+                
+                  case s if s.contains(Recommended) && s.contains(Used) =>
+                    (recommendedDrugs & usedDrugs)
+                
+                  case s if s.contains(Recommended) =>
+                    recommendedDrugs
+                
+                  case s if s.contains(Used) =>
+                    usedDrugs
+                
+                  case _ => 
+                    (recommendedDrugs | usedDrugs) 
+                }
+                  .exists(name => med.display.exists(name contains _.toLowerCase))
+
+            }
+          )
 
 
       lazy val mutatedGeneIdSelection =
@@ -310,7 +327,6 @@ object FSBackedLocalDB
           
             // check if any param matches, not all
             snvParams.exists(snvs.exists(_)) 
-//            snvParams.forall(snvs.exists(_))
           }
         
       lazy val cnvsMatch =
@@ -324,7 +340,6 @@ object FSBackedLocalDB
 
             // check if any param matches, not all
             cnvParams.exists(cnvs.exists(_))
-//            cnvParams.forall(cnvs.exists(_))
           }
 
       lazy val dnaFusionsMatch =
@@ -338,7 +353,6 @@ object FSBackedLocalDB
 
             // check if any param matches, not all
             fusionParams.exists(dnaFusions.exists(_))
-//            fusionParams.forall(dnaFusions.exists(_))
           }
 
       lazy val rnaFusionsMatch =
@@ -352,7 +366,6 @@ object FSBackedLocalDB
 
             // check if any param matches, not all
             fusionParams.exists(rnaFusions.exists(_))
-//            fusionParams.forall(rnaFusions.exists(_))
           }
 
       snvsMatch &&
@@ -363,10 +376,11 @@ object FSBackedLocalDB
       matchesQuery(mtbfile.diagnoses.getOrElse(List.empty).map(_.icd10.get.code), diagnosesSelection) &&
       matchesQuery(mtbfile.histologyReports.getOrElse(List.empty).flatMap(_.tumorMorphology).map(_.value.code), morphologySelection) &&
       matchesQuery(mtbfile.responses.getOrElse(List.empty).map(_.value.code), responsesSelection) &&
-      matchesQuery(recommendedDrugCodes & usedDrugCodes, bothUsagesDrugSelection) &&
-      matchesQuery(recommendedDrugCodes, recommendedDrugSelection) &&
-      matchesQuery(usedDrugCodes, usedDrugSelection ) &&
-      matchesQuery(recommendedDrugCodes ++ usedDrugCodes, anyUsageDrugSelection)
+      medicationFulfilled
+//      matchesQuery(recommendedDrugCodes & usedDrugCodes, bothUsagesDrugSelection) &&
+//      matchesQuery(recommendedDrugCodes, recommendedDrugSelection) &&
+//      matchesQuery(usedDrugCodes, usedDrugSelection ) &&
+//      matchesQuery(recommendedDrugCodes ++ usedDrugCodes, anyUsageDrugSelection)
 
   }
 
@@ -382,9 +396,8 @@ class FSBackedLocalDB private (
 {
 
 
-  private def newSnapshotId: Snapshot.Id = {
+  private def newSnapshotId: Snapshot.Id =
     Snapshot.Id(randomUUID.toString)
-  }
 
 
   def save(
