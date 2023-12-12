@@ -25,9 +25,7 @@ import de.bwhc.mtb.dtos.{
   ValueSets
 }
 import de.bwhc.catalogs.med.MedicationCatalog
-
-import play.api.libs.json.Writes
-import play.api.libs.json.Json.{prettyPrint,toJson}
+import de.bwhc.mtb.dto.extensions.CodingExtensions._
 
 
 trait FilteringOps
@@ -121,18 +119,20 @@ trait FilteringOps
   }
 
 
-  private def toCoding(
-    implicit catalog: MedicationCatalog
-  ): Medication.Coding => Option[Coding[Medication.Code]] = {
+  private implicit val atc =
+    MedicationCatalog.getInstance.get
+
+
+  private def toCoding: Medication.Coding => Option[Coding[Medication.Code]] = {
 
     case Medication.Coding(code,system,display,version) =>
 
       system match {
 
         case Medication.System.ATC =>
-          catalog.findWithCode(
+          atc.findWithCode(
             code.value,
-            version.getOrElse(catalog.latestVersion)
+            version.getOrElse(atc.latestVersion)
           )
           .map(
             med =>
@@ -168,8 +168,6 @@ trait FilteringOps
   private def DefaultTherapyRecommendationFilter(
     mtbfiles: Iterable[MTBFile],
     queriedMedications: List[Coding[Medication.Code]]
-  )(
-    implicit catalog: MedicationCatalog
   ): Query.TherapyRecommendationFilter = {
 
     import ValueSets._
@@ -183,8 +181,9 @@ trait FilteringOps
       recommendations
         .toList
         .flatMap(_.medication.getOrElse(List.empty))
-        .distinctBy(_.code)
-        .sortBy(_.code.value)
+        .map(_.complete)
+        .distinctBy(_.display)
+        .sortBy(_.display)
         .pipe(
           meds =>
             if (recommendations.exists(_.medication.isEmpty))
@@ -193,8 +192,6 @@ trait FilteringOps
               meds
         )
         .flatMap(toCoding)
-        
-
 
     val priorities =
       recommendations
@@ -231,7 +228,7 @@ trait FilteringOps
           .map(coding =>
             Selection.Item(
               coding,
-              queriedMedications.isEmpty || queriedMedications.exists(_.code == coding.code)
+              queriedMedications.isEmpty || queriedMedications.exists(_.display == coding.display)
             )
           )
       )  
@@ -243,8 +240,6 @@ trait FilteringOps
   private def DefaultMolecularTherapyFilter(
     mtbfiles: Iterable[MTBFile],
     queriedMedications: List[Coding[Medication.Code]]
-  )(
-    implicit catalog: MedicationCatalog
   ): Query.MolecularTherapyFilter = {
 
     import ValueSets._
@@ -265,8 +260,9 @@ trait FilteringOps
       therapies
         .toList
         .flatMap(_.medication.getOrElse(List.empty))
-        .distinctBy(_.code)
-        .sortBy(_.code.value)
+        .map(_.complete)
+        .distinctBy(_.display)
+        .sortBy(_.display)
         .pipe(
           meds =>
             if (therapies.exists(_.medication.isEmpty))
@@ -296,7 +292,7 @@ trait FilteringOps
           .map(coding =>
             Selection.Item(
               coding,
-              queriedMedications.isEmpty || queriedMedications.exists(_.code == coding.code)
+              queriedMedications.isEmpty || queriedMedications.exists(_.display == coding.display)
             )
           )
       ),
@@ -313,8 +309,6 @@ trait FilteringOps
   def DefaultFilters(
     mtbfiles: Iterable[MTBFile],
     parameters: Query.Parameters
-  )(
-    implicit catalog: MedicationCatalog
   ): Query.Filters = {
 
     Query.Filters(
@@ -398,6 +392,67 @@ trait FilteringOps
 
     recommendation =>
 
+      lazy val selectedMedicationNames: Seq[String] =
+        filter.medication
+          .selectedValues
+          .flatMap(_.display)
+          .map(_.toLowerCase)
+      
+      recommendation.priority.fold(true)(filter.priority.isSelected(_)) &&
+      filter.levelOfEvidence
+        .selectedValues
+        .contains(
+          recommendation
+            .levelOfEvidence
+            .map(_.grading.code)
+            .getOrElse(LevelOfEvidence.Grading.Undefined)
+        ) &&
+      recommendation.medication
+        .fold(
+          selectedMedicationNames contains EmptyMedication.display.get.toLowerCase
+        )(
+          _ exists (_.complete.display.exists(selectedMedicationNames contains _.toLowerCase))
+        )
+
+  }
+
+  
+  implicit def molecularTherapyFilterToPredicate(
+    filter: Query.MolecularTherapyFilter
+  ): ((MolecularTherapy,Option[Response])) => Boolean = {
+
+    case (therapy,response) =>
+
+      val responses: Seq[RECIST.Value] = 
+        filter.response
+          .selectedValues
+          .map(_.code)
+      
+      lazy val selectedMedicationNames: Seq[String] =
+        filter.medication
+          .selectedValues
+          .flatMap(_.display)
+          .map(_.toLowerCase)
+      
+      filter.status.selectedValues.map(_.code).contains(therapy.status) &&
+      filter.recordingDate.contains(YearMonth.from(therapy.recordedOn)) &&
+      therapy.medication
+        .fold(
+          selectedMedicationNames contains EmptyMedication.display.get.toLowerCase
+        )(
+          _ exists (_.complete.display.exists(selectedMedicationNames contains _.toLowerCase))
+        ) &&
+      response.map(_.value.code).fold(true)(responses.contains)
+
+  }
+
+/*  
+  implicit def therapyRecommendationFilterToPredicate(
+    filter: Query.TherapyRecommendationFilter
+  ): TherapyRecommendation => Boolean = {
+
+    recommendation =>
+
       val selectedMedicationCodes: Seq[Medication.Code] =
         filter.medication.selectedValues.map(_.code)
       
@@ -443,6 +498,7 @@ trait FilteringOps
       response.map(_.value.code).fold(true)(responses.contains)
 
   }
+*/
 
 }
 object FilteringOps extends FilteringOps

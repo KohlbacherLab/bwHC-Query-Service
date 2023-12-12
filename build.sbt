@@ -7,7 +7,7 @@
 name := "bwhc-query-service"
 ThisBuild / organization := "de.bwhc"
 ThisBuild / scalaVersion := "2.13.8"
-ThisBuild / version      := "1.1-SNAPSHOT"
+ThisBuild / version      := "1.1"
 
 
 //-----------------------------------------------------------------------------
@@ -26,7 +26,6 @@ lazy val global = project
      bwhc_connector,
      bwhc_broker_connector,
      fs_mtbfile_db,
-//     kaplan_meier,
      tests
   )
 
@@ -105,19 +104,6 @@ lazy val fs_mtbfile_db = project
     impl
   )
 
-/*
-lazy val kaplan_meier = project
-  .settings(
-    name := "kaplan-meier-util",
-    settings,
-    libraryDependencies ++= Seq(
-      dependencies.scalatest,
-    )
-  )
-  .dependsOn(
-    impl
-  )
-*/
 
 lazy val tests = project
   .settings(
@@ -151,13 +137,12 @@ lazy val dependencies =
     val scala_xml          = "org.scala-lang.modules" %% "scala-xml"               % "2.0.0"
     val repo_utils         = "de.ekut.tbi"            %% "repository-utils"        % "1.0-SNAPSHOT"
     val bwhc_utils         = "de.bwhc"                %% "utils"                   % "1.1"
-    val bwhc_mtb_dtos      = "de.bwhc"                %% "mtb-dtos"                % "1.0-SNAPSHOT"
-    val bwhc_mtb_dto_gens  = "de.bwhc"                %% "mtb-dto-generators"      % "1.0-SNAPSHOT"
-    val bwhc_mtb_views     = "de.bwhc"                %% "mtb-views"               % "1.0-SNAPSHOT"
+    val bwhc_mtb_dtos      = "de.bwhc"                %% "mtb-dtos"                % "1.0"
+    val bwhc_mtb_dto_gens  = "de.bwhc"                %% "mtb-dto-generators"      % "1.0"
+    val bwhc_mtb_views     = "de.bwhc"                %% "mtb-views"               % "1.0"
     val hgnc_catalog_impl  = "de.bwhc"                %% "hgnc-impl"               % "1.0" % Test
     val icd_catalogs_impl  = "de.bwhc"                %% "icd-catalogs-impl"       % "1.1" % Test
-//    val med_catalog_impl   = "de.bwhc"                %% "medication-catalog-impl" % "1.0" % Test
-    val med_catalog_impl   = "de.bwhc"                %% "medication-catalog-impl" % "1.1-SNAPSHOT" % Test
+    val med_catalog_impl   = "de.bwhc"                %% "medication-catalog-impl" % "1.1" % Test
   }
 
 

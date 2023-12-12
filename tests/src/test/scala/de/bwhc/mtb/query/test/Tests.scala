@@ -172,8 +172,8 @@ class Tests extends AsyncFlatSpec
   "Local Query results and filtering operations" must "be valid" in {
 
     import extensions._
-    import de.bwhc.mtb.dtos.ValueSets._  // For ValueSet[Gender.Value]
-    import de.bwhc.mtb.query.api.Mappings._         // For ValueSet[VitalStatus.Value]
+    import de.bwhc.mtb.dtos.ValueSets._       // For ValueSet[Gender.Value]
+    import de.bwhc.mtb.query.api.Mappings._   // For ValueSet[VitalStatus.Value]
     import LevelOfEvidence.Grading.{m1A,m1B}
 
     val mode   = Coding(Mode.Local,None)
