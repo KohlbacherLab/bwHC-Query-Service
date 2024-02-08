@@ -41,7 +41,6 @@ import de.bwhc.mtb.query.api.{
   PeerStatus,
   PeerStatusReport,
   PeerToPeerRequest,
-//  Naught,
   MTBFileParameters,
   LocalQCReport,
   ConceptCount,
@@ -91,7 +90,9 @@ extends BwHCConnector
 with Logging
 {
 
-  private val timeout = 10 seconds
+  private val timeout =
+    config.timeout.getOrElse(10) seconds
+//  private val timeout = 10 seconds
 
   private val OK = 200
 

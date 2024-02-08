@@ -22,9 +22,8 @@ import de.bwhc.mtb.dtos.ZPM
 
 trait Config
 {  
-
+  def timeout: Option[Int]
   def peerBaseURLs: Map[ZPM,URL]
-
 }
 
 
@@ -33,7 +32,12 @@ object Config
   
   //-----------------------------------------------------------------------------
 
-  private case class Impl(sites: List[SiteWithBaseURL]) extends Config
+  private case class Impl
+  (
+    timeout: Option[Int],
+    sites: List[SiteWithBaseURL]
+  )
+  extends Config
   {
     val peerBaseURLs =
       sites.map {
@@ -62,6 +66,10 @@ object Config
   
   private def parseXMLConfig(in: InputStream): Impl = {
     val xml = XML.load(in)
+
+    val timeout =
+      Option(xml \ "Timeout" \@ "seconds").map(_.toInt)
+
     val sites =
       for {
         zpm <- (xml \ "ZPM")
@@ -69,7 +77,7 @@ object Config
         url  = (zpm \@ "baseURL")
       } yield SiteWithBaseURL(site,url)
 
-    Impl(sites.toList)
+    Impl(timeout,sites.toList)
   }
 
 

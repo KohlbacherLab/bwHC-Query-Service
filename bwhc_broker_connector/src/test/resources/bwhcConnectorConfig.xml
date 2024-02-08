@@ -3,6 +3,8 @@
 
   <Site id="UKT"/>
 
+  <Proxy host="localhost" port="80"/>
+
   <Broker baseURL="http://localhost:80"/>
 
   <!--

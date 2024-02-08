@@ -12,13 +12,11 @@ import akka.actor.ActorSystem
 import akka.stream.Materializer
 import play.api.libs.ws.{
   StandaloneWSClient,
-  StandaloneWSRequest
-}
-import play.api.libs.ws.ahc.StandaloneAhcWSClient
-import play.api.libs.ws.{
+//  DefaultWSProxyServer => ProxyServer,
   StandaloneWSRequest => WSRequest,
   StandaloneWSResponse => WSResponse
 }
+import play.api.libs.ws.ahc.StandaloneAhcWSClient
 import play.api.libs.ws.JsonBodyReadables._
 import play.api.libs.ws.JsonBodyWritables._
 import play.api.libs.ws.DefaultBodyWritables._
@@ -91,7 +89,9 @@ extends BwHCConnector
 with Logging
 {
 
-  private val timeout = 10 seconds
+//  private val timeout = 10 seconds
+  private val timeout =
+    config.timeout.getOrElse(10) seconds
 
   private val OK = 200
 
@@ -143,11 +143,55 @@ with Logging
     )
   }
 
+/*  
+  private val proxyServer: Option[ProxyServer] =
+    config.proxy.map {
+      case Config.Proxy(host,port) =>
+        ProxyServer(
+          host,
+          port.getOrElse(80)
+        )
+    }
+
 
   private def request(
     rawUri: String,
     virtualHost: Option[String] = None
   ): WSRequest = {
+
+    import scala.util.chaining._
+
+    val uri =
+      if (rawUri startsWith "/") rawUri.substring(1)
+      else rawUri
+
+//    val req =
+    wsclient.url(s"${config.baseURL}$uri")
+      .withRequestTimeout(timeout)
+      .pipe(
+        req =>
+          virtualHost match {
+            case Some(host) => req.withVirtualHost(host)
+            case _          => req
+          }
+      )
+      .pipe(
+        req =>
+          proxyServer match {
+            case Some(p) => req.withProxyServer(p)
+            case _       => req
+          }
+      )
+  
+  }
+*/
+  
+  private def request(
+    rawUri: String,
+    virtualHost: Option[String] = None
+  ): WSRequest = {
+
+    import scala.util.chaining._
 
     val uri =
       if (rawUri startsWith "/") rawUri.substring(1)
@@ -158,9 +202,10 @@ with Logging
         .withRequestTimeout(timeout)
 
     virtualHost match {
-      case Some(host) => req.withHttpHeaders("Host" -> host)
+      case Some(host) => req.withVirtualHost(host)
       case _          => req
     }
+    
   }
 
 

@@ -21,12 +21,19 @@ trait Config
 {  
   def siteId: String
   def baseURL: URL
+  def timeout: Option[Int]
   def updatePeriod: Option[Long]
 }
 
 
 object Config
 {
+
+  final case class Proxy
+  (
+    host: String,
+    port: Option[Int]
+  )
   
   //-----------------------------------------------------------------------------
 
@@ -34,6 +41,7 @@ object Config
   (
     siteId: String,
     url: String,
+    timeout: Option[Int],
     updatePeriod: Option[Long]
   )
   extends Config
@@ -56,6 +64,7 @@ object Config
     Impl(
       (xml \ "Site" \@ "id"),
       (xml \ "Broker" \@ "baseURL"),
+      Option(xml \ "Timeout" \@ "seconds").map(_.toInt),
       Option((xml \ "Update" \@ "period")).map(_.toLong)
     )
   }
@@ -79,11 +88,17 @@ object Config
       case t => 
         Try {
           for {
-            siteId  <- Option(System.getProperty("bwhc.connector.config.siteId"))
-            baseUrl <- Option(System.getProperty("bwhc.connector.config.baseUrl"))
-            period  =  Option(System.getProperty("bwhc.connector.config.update.period"))
-                         .map(_.toLong)
-          } yield Impl(siteId,baseUrl,period)
+            siteId    <- Option(System.getProperty("bwhc.connector.config.siteId"))
+            baseUrl   <- Option(System.getProperty("bwhc.connector.config.baseUrl"))
+            timeout   =  Option(System.getProperty("bwhc.connector.config.timeout")).map(_.toInt)
+            period    =  Option(System.getProperty("bwhc.connector.config.update.period")).map(_.toLong)
+          } yield
+            Impl(
+              siteId,
+              baseUrl,
+              timeout,
+              period
+            )
         }
         .map(_.get)
     }

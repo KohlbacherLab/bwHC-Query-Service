@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <bwHC>
+  <Timeout seconds="30"/>
   <ZPM site="Freiburg"   baseURL="http://localhost:9001/bwhc/mtb/"/>
   <ZPM site="Heidelberg" baseURL="http://localhost:9002/bwhc/mtb/"/>
   <ZPM site="Tübingen"   baseURL="http://localhost:9003/bwhc/mtb/"/>

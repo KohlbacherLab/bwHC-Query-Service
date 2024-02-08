@@ -56,6 +56,11 @@ The installation package comes with bwhcConnectorConfig.xml
   <!-- Base URL to DNPM-Proxy -->
   <Broker baseURL="http://localhost"/>
 
+  <!-- OPTIONAL, Timeout (in seconds) -->
+  <!--
+  <Timeout seconds="30"/> 
+  -->
+
   <!-- OPTIONAL, for periodic auto-update of site list from broker: Period (in seconds) -->
   <!--
   <Update period="30"/> 
