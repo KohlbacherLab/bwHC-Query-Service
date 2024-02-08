@@ -7,7 +7,7 @@
 name := "bwhc-query-service"
 ThisBuild / organization := "de.bwhc"
 ThisBuild / scalaVersion := "2.13.8"
-ThisBuild / version      := "1.1"
+ThisBuild / version      := "1.1.1"
 
 
 //-----------------------------------------------------------------------------
@@ -139,7 +139,7 @@ lazy val dependencies =
     val bwhc_utils         = "de.bwhc"                %% "utils"                   % "1.1"
     val bwhc_mtb_dtos      = "de.bwhc"                %% "mtb-dtos"                % "1.0"
     val bwhc_mtb_dto_gens  = "de.bwhc"                %% "mtb-dto-generators"      % "1.0"
-    val bwhc_mtb_views     = "de.bwhc"                %% "mtb-views"               % "1.0"
+    val bwhc_mtb_views     = "de.bwhc"                %% "mtb-views"               % "1.0.1"
     val hgnc_catalog_impl  = "de.bwhc"                %% "hgnc-impl"               % "1.0" % Test
     val icd_catalogs_impl  = "de.bwhc"                %% "icd-catalogs-impl"       % "1.1" % Test
     val med_catalog_impl   = "de.bwhc"                %% "medication-catalog-impl" % "1.1" % Test

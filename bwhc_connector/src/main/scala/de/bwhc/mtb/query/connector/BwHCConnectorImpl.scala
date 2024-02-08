@@ -92,7 +92,6 @@ with Logging
 
   private val timeout =
     config.timeout.getOrElse(10) seconds
-//  private val timeout = 10 seconds
 
   private val OK = 200
 
